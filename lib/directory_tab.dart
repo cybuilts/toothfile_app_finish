@@ -1,6 +1,8 @@
+// ignore_for_file: unused_local_variable
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 import 'package:touch_bar/touch_bar.dart';
 
 class DirectoryTab extends StatefulWidget {
@@ -168,15 +170,37 @@ class _DirectoryTabState extends State<DirectoryTab> {
             backgroundColor: Colors.transparent,
             builder: (context) {
               final messageController = TextEditingController();
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final sheetColor = isDark
+                  ? const Color(0xFF111827)
+                  : Colors.white;
+              final borderColor = isDark
+                  ? const Color(0xFF2B3A55)
+                  : const Color(0xFFE2E8F0);
+              final titleColor = isDark
+                  ? const Color(0xFFE5E7EB)
+                  : const Color(0xFF020817);
+              final mutedTextColor = isDark
+                  ? const Color(0xFFA8B3C7)
+                  : const Color(0xFF64748B);
+              final hintTextColor = isDark
+                  ? const Color(0xFF8FA2BF)
+                  : const Color(0xFF94A3B8);
+              final inputColor = isDark
+                  ? const Color(0xFF0F172A)
+                  : const Color(0xFFF8FAFC);
               return Padding(
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
                 ),
                 child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
+                  decoration: BoxDecoration(
+                    color: sheetColor,
+                    borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(20),
+                    ),
+                    border: Border(
+                      top: BorderSide(color: borderColor, width: 1),
                     ),
                   ),
                   padding: const EdgeInsets.all(24),
@@ -190,26 +214,23 @@ class _DirectoryTabState extends State<DirectoryTab> {
                           height: 4,
                           margin: const EdgeInsets.only(bottom: 20),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE2E8F0),
+                            color: borderColor,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                       ),
                       Text(
                         'Connect with $receiverName',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Add an optional message to introduce yourself',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF64748B),
-                        ),
+                        style: TextStyle(fontSize: 14, color: mutedTextColor),
                       ),
                       const SizedBox(height: 20),
                       TextField(
@@ -218,18 +239,14 @@ class _DirectoryTabState extends State<DirectoryTab> {
                         autofocus: true,
                         decoration: InputDecoration(
                           hintText: 'Hi, I\'d like to connect with you...',
-                          hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                          hintStyle: TextStyle(color: hintTextColor),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFE2E8F0),
-                            ),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFE2E8F0),
-                            ),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -239,7 +256,7 @@ class _DirectoryTabState extends State<DirectoryTab> {
                             ),
                           ),
                           filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
+                          fillColor: inputColor,
                           contentPadding: const EdgeInsets.all(16),
                         ),
                       ),
@@ -253,19 +270,17 @@ class _DirectoryTabState extends State<DirectoryTab> {
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
-                                side: const BorderSide(
-                                  color: Color(0xFFE2E8F0),
-                                ),
+                                side: BorderSide(color: borderColor),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Cancel',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF64748B),
+                                  color: mutedTextColor,
                                 ),
                               ),
                             ),
@@ -417,6 +432,32 @@ class _DirectoryTabState extends State<DirectoryTab> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+        final borderColor = isDark
+            ? const Color(0xFF2B3A55)
+            : const Color(0xFFE2E8F0);
+        final titleColor = isDark
+            ? const Color(0xFFE5E7EB)
+            : const Color(0xFF020817);
+        final selectedBg = isDark
+            ? const Color(0xFF1E3A8A)
+            : const Color(0xFFEFF6FF);
+        final selectedBorder = isDark
+            ? const Color(0xFF3B82F6)
+            : const Color(0xFFBFDBFE);
+        final selectedText = isDark
+            ? const Color(0xFFBFDBFE)
+            : const Color(0xFF1E3A8A);
+        final unselectedBg = isDark
+            ? const Color(0xFF1D2A3F)
+            : const Color(0xFFF1F5F9);
+        final unselectedIcon = isDark
+            ? const Color(0xFFA8B3C7)
+            : const Color(0xFF64748B);
+        final unselectedText = isDark
+            ? const Color(0xFFE5E7EB)
+            : const Color(0xFF0F172A);
         TouchBarHelper.setPopupTouchBar(
           context: context,
           actions: [
@@ -456,6 +497,11 @@ class _DirectoryTabState extends State<DirectoryTab> {
           ],
         );
         return Container(
+          decoration: BoxDecoration(
+            color: sheetColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border(top: BorderSide(color: borderColor, width: 1)),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -465,11 +511,11 @@ class _DirectoryTabState extends State<DirectoryTab> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE2E8F0),
+                  color: borderColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Align(
                   alignment: Alignment.centerLeft,
@@ -478,7 +524,7 @@ class _DirectoryTabState extends State<DirectoryTab> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF020817),
+                      color: titleColor,
                     ),
                   ),
                 ),
@@ -507,13 +553,11 @@ class _DirectoryTabState extends State<DirectoryTab> {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFFEFF6FF)
-                            : Colors.transparent,
+                        color: isSelected ? selectedBg : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isSelected
-                              ? const Color(0xFFBFDBFE)
+                              ? selectedBorder
                               : Colors.transparent,
                         ),
                       ),
@@ -524,7 +568,7 @@ class _DirectoryTabState extends State<DirectoryTab> {
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? const Color(0xFF2563EB)
-                                  : const Color(0xFFF1F5F9),
+                                  : unselectedBg,
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -534,9 +578,7 @@ class _DirectoryTabState extends State<DirectoryTab> {
                                   ? Icons.build_rounded
                                   : Icons.people_alt_rounded,
                               size: 16,
-                              color: isSelected
-                                  ? Colors.white
-                                  : const Color(0xFF64748B),
+                              color: isSelected ? Colors.white : unselectedIcon,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -553,8 +595,8 @@ class _DirectoryTabState extends State<DirectoryTab> {
                                     ? FontWeight.w600
                                     : FontWeight.w500,
                                 color: isSelected
-                                    ? const Color(0xFF1E3A8A)
-                                    : const Color(0xFF0F172A),
+                                    ? selectedText
+                                    : unselectedText,
                               ),
                             ),
                           ),
@@ -583,9 +625,32 @@ class _DirectoryTabState extends State<DirectoryTab> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
     final isTablet = screenWidth >= 600 && screenWidth < 1200;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageColor = isDark
+        ? const Color(0xFF0B1220)
+        : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final hintTextColor = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final chipBg = isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE);
+    final chipText = isDark ? const Color(0xFFBFDBFE) : const Color(0xFF2563EB);
+    final emptyBg = isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF1F5F9);
+    final headerIconBg = isDark
+        ? const Color(0xFF3B2A1F)
+        : const Color(0xFFFFF7ED);
 
     return Container(
-      color: const Color(0xFFF8FAFC),
+      color: pageColor,
       child: SafeArea(
         top: false,
         child: Column(
@@ -607,7 +672,7 @@ class _DirectoryTabState extends State<DirectoryTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF7ED),
+                          color: headerIconBg,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -623,24 +688,21 @@ class _DirectoryTabState extends State<DirectoryTab> {
                           style: TextStyle(
                             fontSize: isMobile ? 22 : 24,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF020817),
+                            color: titleColor,
                             letterSpacing: -0.5,
                           ),
                         ),
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cardColor,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1,
-                          ),
+                          border: Border.all(color: borderColor, width: 1),
                         ),
                         child: IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.refresh,
-                            color: Color(0xFF64748B),
+                            color: mutedTextColor,
                             size: 20,
                           ),
                           onPressed: _loadUsers,
@@ -651,9 +713,9 @@ class _DirectoryTabState extends State<DirectoryTab> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Connect with dental technicians',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 14, color: mutedTextColor),
                   ),
                 ],
               ),
@@ -668,12 +730,9 @@ class _DirectoryTabState extends State<DirectoryTab> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardColor,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 1,
-                        ),
+                        border: Border.all(color: borderColor, width: 1),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
@@ -684,12 +743,12 @@ class _DirectoryTabState extends State<DirectoryTab> {
                       ),
                       child: TextField(
                         controller: _searchController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Search users...',
-                          hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+                          hintStyle: TextStyle(color: hintTextColor),
                           prefixIcon: Icon(
                             Icons.search,
-                            color: Color(0xFF94A3B8),
+                            color: hintTextColor,
                             size: 20,
                           ),
                           border: InputBorder.none,
@@ -704,12 +763,9 @@ class _DirectoryTabState extends State<DirectoryTab> {
                   const SizedBox(width: 12),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFFE2E8F0),
-                        width: 1,
-                      ),
+                      border: Border.all(color: borderColor, width: 1),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.03),
@@ -719,9 +775,9 @@ class _DirectoryTabState extends State<DirectoryTab> {
                       ],
                     ),
                     child: IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.filter_list,
-                        color: Color(0xFF64748B),
+                        color: mutedTextColor,
                         size: 22,
                       ),
                       onPressed: _showRoleFilter,
@@ -751,9 +807,9 @@ class _DirectoryTabState extends State<DirectoryTab> {
                       _updateTouchBar();
                     });
                   },
-                  backgroundColor: const Color(0xFFDBEAFE),
-                  labelStyle: const TextStyle(
-                    color: Color(0xFF2563EB),
+                  backgroundColor: chipBg,
+                  labelStyle: TextStyle(
+                    color: chipText,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -772,8 +828,8 @@ class _DirectoryTabState extends State<DirectoryTab> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
+                            decoration: BoxDecoration(
+                              color: emptyBg,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -783,20 +839,20 @@ class _DirectoryTabState extends State<DirectoryTab> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          const Text(
+                          Text(
                             'No users found',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF020817),
+                              color: titleColor,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             'Try adjusting your search or filters',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF64748B),
+                              color: mutedTextColor,
                             ),
                           ),
                         ],
@@ -872,6 +928,27 @@ class UserCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final roleChipBg = isDark
+        ? const Color(0xFF1E3A8A)
+        : const Color(0xFFDBEAFE);
+    final roleChipText = isDark
+        ? const Color(0xFFBFDBFE)
+        : const Color(0xFF2563EB);
+    final infoPanel = isDark
+        ? const Color(0xFF1D2A3F)
+        : const Color(0xFFF1F5F9);
+    final onlineBorder = isDark ? const Color(0xFF111827) : Colors.white;
     Color statusColor;
     String buttonText;
     IconData buttonIcon;
@@ -892,16 +969,24 @@ class UserCard extends StatelessWidget {
         statusColor = const Color(0xFFF97316);
         buttonText = 'Request Sent';
         buttonIcon = Icons.schedule_rounded;
-        buttonBackgroundColor = const Color(0xFFFFF7ED);
-        buttonForegroundColor = const Color(0xFFF97316);
+        buttonBackgroundColor = isDark
+            ? const Color(0xFF3B2A1F)
+            : const Color(0xFFFFF7ED);
+        buttonForegroundColor = isDark
+            ? const Color(0xFFFCD34D)
+            : const Color(0xFFF97316);
         isEnabled = false;
         break;
       case UserStatus.connected:
         statusColor = const Color(0xFF22C55E);
         buttonText = 'Connected';
         buttonIcon = Icons.check_circle_rounded;
-        buttonBackgroundColor = const Color(0xFFF0FDF4);
-        buttonForegroundColor = const Color(0xFF22C55E);
+        buttonBackgroundColor = isDark
+            ? const Color(0xFF1B3A2A)
+            : const Color(0xFFF0FDF4);
+        buttonForegroundColor = isDark
+            ? const Color(0xFF86EFAC)
+            : const Color(0xFF22C55E);
         isEnabled = false;
         break;
     }
@@ -909,9 +994,9 @@ class UserCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+        border: Border.all(color: borderColor, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -961,7 +1046,7 @@ class UserCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: const Color(0xFF22C55E),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2.5),
+                          border: Border.all(color: onlineBorder, width: 2.5),
                         ),
                       ),
                     ),
@@ -974,10 +1059,10 @@ class UserCard extends StatelessWidget {
                     children: [
                       Text(
                         name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                           height: 1.3,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -989,15 +1074,15 @@ class UserCard extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDBEAFE),
+                          color: roleChipBg,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           role,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF2563EB),
+                            color: roleChipText,
                           ),
                         ),
                       ),
@@ -1014,12 +1099,12 @@ class UserCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: infoPanel,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.email_outlined,
-                    color: Color(0xFF64748B),
+                    color: mutedTextColor,
                     size: 16,
                   ),
                 ),
@@ -1027,9 +1112,9 @@ class UserCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     email,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF64748B),
+                      color: mutedTextColor,
                       height: 1.4,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1045,21 +1130,21 @@ class UserCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: infoPanel,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.access_time_rounded,
-                    color: Color(0xFF64748B),
+                    color: mutedTextColor,
                     size: 16,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Text(
                   'Joined $joinedDate',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF64748B),
+                    color: mutedTextColor,
                     height: 1.4,
                   ),
                 ),

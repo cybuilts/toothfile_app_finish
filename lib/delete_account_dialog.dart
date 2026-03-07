@@ -1,8 +1,10 @@
+// ignore_for_file: unused_import, unused_field
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:toothfile/delete_account.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 
 class DeleteAccountDialog extends StatefulWidget {
   const DeleteAccountDialog({super.key});
@@ -169,11 +171,28 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final hintTextColor = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final fieldBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final softPanel = isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF1F5F9);
+    final alertIconBg = isDark ? const Color(0xFF3B1A1A) : const Color(0xFFFEE2E2);
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: sheetColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       constraints: BoxConstraints(maxHeight: screenHeight * 0.9),
       child: Column(
@@ -185,7 +204,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
             height: 4,
             margin: const EdgeInsets.only(top: 12, bottom: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
+              color: borderColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -219,7 +238,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -237,7 +256,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                         'This action cannot be undone',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF64748B),
+                          color: mutedTextColor,
                         ),
                       ),
                     ],
@@ -245,13 +264,13 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: softPanel,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: Color(0xFF64748B),
+                      color: mutedTextColor,
                       size: 20,
                     ),
                     onPressed: _isLoading
@@ -322,12 +341,12 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                   const SizedBox(height: 24),
 
                   // What will be deleted section
-                  const Text(
+                  Text(
                     'Deleting your account will permanently remove:',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF020817),
+                      color: titleColor,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -360,18 +379,18 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                   const SizedBox(height: 24),
 
                   // Confirmation field
-                  const Text(
+                  Text(
                     'Type DELETE to confirm',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF020817),
+                      color: titleColor,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'This confirms you understand this action is permanent',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 12, color: mutedTextColor),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -379,12 +398,12 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                     enabled: !_isLoading,
                     decoration: InputDecoration(
                       hintText: 'Type DELETE here',
-                      hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                      hintStyle: TextStyle(color: hintTextColor),
                       prefixIcon: Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEE2E2),
+                          color: alertIconBg,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(
@@ -395,11 +414,11 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -409,7 +428,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                         ),
                       ),
                       filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
+                      fillColor: fieldBg,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 16,
@@ -424,11 +443,9 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
           // Bottom Buttons
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-              ),
+            decoration: BoxDecoration(
+              color: sheetColor,
+              border: Border(top: BorderSide(color: borderColor, width: 1)),
             ),
             child: Row(
               children: [
@@ -439,17 +456,17 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                         : () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      side: BorderSide(color: borderColor),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                        color: mutedTextColor,
                       ),
                     ),
                   ),
@@ -466,7 +483,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                           : null,
                       color: _isConfirmButtonEnabled && !_isLoading
                           ? null
-                          : const Color(0xFFF1F5F9),
+                          : softPanel,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: _isConfirmButtonEnabled && !_isLoading
                           ? [
@@ -486,14 +503,14 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                         backgroundColor: Colors.transparent,
                         foregroundColor: _isConfirmButtonEnabled && !_isLoading
                             ? Colors.white
-                            : const Color(0xFF94A3B8),
+                            : hintTextColor,
                         shadowColor: Colors.transparent,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         disabledBackgroundColor: Colors.transparent,
-                        disabledForegroundColor: const Color(0xFF94A3B8),
+                        disabledForegroundColor: hintTextColor,
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -530,20 +547,29 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
   }
 
   Widget _buildDeleteItem(IconData icon, String text) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final itemBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final iconBg = isDark ? const Color(0xFF3B1A1A) : const Color(0xFFFEE2E2);
+    final textColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: itemBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFFEE2E2),
+              color: iconBg,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, size: 18, color: const Color(0xFFEF4444)),
@@ -552,9 +578,9 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF020817),
+                color: textColor,
                 fontWeight: FontWeight.w500,
                 height: 1.4,
               ),

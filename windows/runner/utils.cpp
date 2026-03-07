@@ -95,3 +95,38 @@ void RegisterUrlScheme(const wchar_t* scheme) {
     ::RegCloseKey(hKey);
   }
 }
+
+void RegisterQuickShareContextMenu() {
+  wchar_t exe_path[MAX_PATH];
+  ::GetModuleFileName(nullptr, exe_path, MAX_PATH);
+
+  const wchar_t* key_path = L"Software\\Classes\\*\\shell\\ToothFileQuickShare";
+  HKEY hKey;
+  if (::RegCreateKeyEx(HKEY_CURRENT_USER, key_path, 0, nullptr,
+                       REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &hKey,
+                       nullptr) != ERROR_SUCCESS) {
+    return;
+  }
+
+  const wchar_t* label = L"Quick Share with ToothFile";
+  ::RegSetValueEx(hKey, nullptr, 0, REG_SZ,
+                  reinterpret_cast<const BYTE*>(label),
+                  static_cast<DWORD>((wcslen(label) + 1) * sizeof(wchar_t)));
+  ::RegSetValueEx(hKey, L"Icon", 0, REG_SZ,
+                  reinterpret_cast<const BYTE*>(exe_path),
+                  static_cast<DWORD>((wcslen(exe_path) + 1) * sizeof(wchar_t)));
+
+  HKEY hCommandKey;
+  if (::RegCreateKeyEx(hKey, L"command", 0, nullptr, REG_OPTION_NON_VOLATILE,
+                       KEY_WRITE, nullptr, &hCommandKey,
+                       nullptr) == ERROR_SUCCESS) {
+    std::wstring command =
+        L"\"" + std::wstring(exe_path) + L"\" --quick-share \"%1\"";
+    ::RegSetValueEx(hCommandKey, nullptr, 0, REG_SZ,
+                    reinterpret_cast<const BYTE*>(command.c_str()),
+                    static_cast<DWORD>((command.size() + 1) * sizeof(wchar_t)));
+    ::RegCloseKey(hCommandKey);
+  }
+
+  ::RegCloseKey(hKey);
+}

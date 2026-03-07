@@ -1,3 +1,4 @@
+// ignore_for_file: unused_import, depend_on_referenced_packages, unused_element
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toothfile/create_order_dialog.dart';
@@ -16,8 +17,7 @@ import 'package:nfc_manager_ndef/nfc_manager_ndef.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:convert';
 import 'forward_dialog.dart';
-
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 import 'package:touch_bar/touch_bar.dart';
 
 class OrderFormTab extends StatefulWidget {
@@ -962,13 +962,28 @@ class _OrderFormTabState extends State<OrderFormTab> {
   }
 
   Future<void> _deleteOrder(String orderId, String customerName) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final dangerSoft = isDark
+        ? const Color(0xFF3B1A1A)
+        : const Color(0xFFFEE2E2);
     final confirm = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: sheetColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border(top: BorderSide(color: borderColor, width: 1)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -979,14 +994,14 @@ class _OrderFormTabState extends State<OrderFormTab> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: borderColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFEE2E2),
+              decoration: BoxDecoration(
+                color: dangerSoft,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -996,19 +1011,19 @@ class _OrderFormTabState extends State<OrderFormTab> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Delete Order?',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF020817),
+                color: titleColor,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Are you sure you want to delete the order for $customerName? This action cannot be undone.',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+              style: TextStyle(fontSize: 14, color: mutedTextColor),
             ),
             const SizedBox(height: 24),
             Row(
@@ -1018,17 +1033,17 @@ class _OrderFormTabState extends State<OrderFormTab> {
                     onPressed: () => Navigator.pop(context, false),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      side: BorderSide(color: borderColor),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                        color: mutedTextColor,
                       ),
                     ),
                   ),
@@ -1166,9 +1181,31 @@ class _OrderFormTabState extends State<OrderFormTab> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageColor = isDark
+        ? const Color(0xFF0B1220)
+        : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final hintTextColor = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final headerIconBg = isDark
+        ? const Color(0xFF1B3A2A)
+        : const Color(0xFFDCFCE7);
+    final errorBg = isDark ? const Color(0xFF3B1A1A) : const Color(0xFFFEF2F2);
+    final emptyBg = isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF1F5F9);
 
     return Container(
-      color: const Color(0xFFF8FAFC),
+      color: pageColor,
       child: SafeArea(
         top: false,
         child: Column(
@@ -1190,7 +1227,7 @@ class _OrderFormTabState extends State<OrderFormTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
+                          color: headerIconBg,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -1206,24 +1243,21 @@ class _OrderFormTabState extends State<OrderFormTab> {
                           style: TextStyle(
                             fontSize: isMobile ? 22 : 24,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF020817),
+                            color: titleColor,
                             letterSpacing: -0.5,
                           ),
                         ),
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cardColor,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1,
-                          ),
+                          border: Border.all(color: borderColor, width: 1),
                         ),
                         child: IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.refresh,
-                            color: Color(0xFF64748B),
+                            color: mutedTextColor,
                             size: 20,
                           ),
                           onPressed: _fetchOrders,
@@ -1234,9 +1268,9 @@ class _OrderFormTabState extends State<OrderFormTab> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Create and manage dental order forms with detailed specifications',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 14, color: mutedTextColor),
                   ),
                 ],
               ),
@@ -1251,12 +1285,9 @@ class _OrderFormTabState extends State<OrderFormTab> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardColor,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 1,
-                        ),
+                        border: Border.all(color: borderColor, width: 1),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
@@ -1268,12 +1299,12 @@ class _OrderFormTabState extends State<OrderFormTab> {
                       child: TextField(
                         controller: _searchController,
                         onChanged: (value) => setState(() {}),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Search orders...',
-                          hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+                          hintStyle: TextStyle(color: hintTextColor),
                           prefixIcon: Icon(
                             Icons.search,
-                            color: Color(0xFF94A3B8),
+                            color: hintTextColor,
                             size: 20,
                           ),
                           border: InputBorder.none,
@@ -1288,12 +1319,9 @@ class _OrderFormTabState extends State<OrderFormTab> {
                   const SizedBox(width: 12),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFFE2E8F0),
-                        width: 1,
-                      ),
+                      border: Border.all(color: borderColor, width: 1),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.03),
@@ -1318,7 +1346,7 @@ class _OrderFormTabState extends State<OrderFormTab> {
                               Icon(
                                 Icons.contactless_outlined,
                                 size: 20,
-                                color: Color(0xFF0F172A),
+                                color: titleColor,
                               ),
                               if (!kIsWeb &&
                                   (Platform.isWindows ||
@@ -1332,7 +1360,7 @@ class _OrderFormTabState extends State<OrderFormTab> {
                                 Text(
                                   'Import from NFC',
                                   style: TextStyle(
-                                    color: Color(0xFF0F172A),
+                                    color: titleColor,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -1417,8 +1445,8 @@ class _OrderFormTabState extends State<OrderFormTab> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFEF2F2),
+                            decoration: BoxDecoration(
+                              color: errorBg,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -1430,9 +1458,11 @@ class _OrderFormTabState extends State<OrderFormTab> {
                           const SizedBox(height: 20),
                           Text(
                             _errorMessage!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
-                              color: Color(0xFFEF4444),
+                              color: isDark
+                                  ? const Color(0xFFFCA5A5)
+                                  : const Color(0xFFEF4444),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -1446,8 +1476,8 @@ class _OrderFormTabState extends State<OrderFormTab> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
+                            decoration: BoxDecoration(
+                              color: emptyBg,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -1457,20 +1487,20 @@ class _OrderFormTabState extends State<OrderFormTab> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          const Text(
+                          Text(
                             'No orders yet',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF020817),
+                              color: titleColor,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             'Create your first order to get started',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF64748B),
+                              color: mutedTextColor,
                             ),
                           ),
                         ],
@@ -1813,31 +1843,46 @@ class OrderCard extends StatelessWidget {
 
   Widget _buildFileChip(BuildContext context, String fileUrl) {
     final fileName = Uri.parse(fileUrl).pathSegments.last;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final chipBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final chipBorder = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final iconColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final textColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final viewBg = isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE);
+    final viewIcon = isDark ? const Color(0xFFBFDBFE) : const Color(0xFF2563EB);
+    final downloadBg = isDark
+        ? const Color(0xFF1B3A2A)
+        : const Color(0xFFDCFCE7);
+    final downloadIcon = isDark
+        ? const Color(0xFF86EFAC)
+        : const Color(0xFF16A34A);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       margin: const EdgeInsets.only(right: 8, bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: chipBg,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: chipBorder),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.insert_drive_file_rounded,
-            size: 16,
-            color: Color(0xFF64748B),
-          ),
+          Icon(Icons.insert_drive_file_rounded, size: 16, color: iconColor),
           const SizedBox(width: 6),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 120),
             child: Text(
               fileName,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF020817),
+                color: textColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1848,14 +1893,10 @@ class OrderCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFFDBEAFE),
+                color: viewBg,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const Icon(
-                Icons.visibility_rounded,
-                size: 14,
-                color: Color(0xFF2563EB),
-              ),
+              child: Icon(Icons.visibility_rounded, size: 14, color: viewIcon),
             ),
           ),
           const SizedBox(width: 6),
@@ -1864,13 +1905,13 @@ class OrderCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFFDCFCE7),
+                color: downloadBg,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.download_rounded,
                 size: 14,
-                color: Color(0xFF16A34A),
+                color: downloadIcon,
               ),
             ),
           ),
@@ -1881,12 +1922,50 @@ class OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final infoChipBg = isDark
+        ? const Color(0xFF1D2A3F)
+        : const Color(0xFFF1F5F9);
+    final actionCardBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final editBg = isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE);
+    final editColor = isDark
+        ? const Color(0xFFBFDBFE)
+        : const Color(0xFF2563EB);
+    final deleteBg = isDark ? const Color(0xFF3B1A1A) : const Color(0xFFFEE2E2);
+    final forwardedBg = isDark
+        ? const Color(0xFF3B2A1F)
+        : const Color(0xFFFFF7ED);
+    final forwardedBorder = isDark
+        ? const Color(0xFF7C5A1B)
+        : const Color(0xFFFCD34D);
+    final forwardedText = isDark
+        ? const Color(0xFFFCD34D)
+        : const Color(0xFFB45309);
+    final toothChipBg = isDark
+        ? const Color(0xFF1E3A8A)
+        : const Color(0xFFDBEAFE);
+    final toothChipText = isDark
+        ? const Color(0xFFBFDBFE)
+        : const Color(0xFF2563EB);
+    final detailsBg = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF8FAFC);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+        border: Border.all(color: borderColor, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -1910,10 +1989,10 @@ class OrderCard extends StatelessWidget {
                     children: [
                       Text(
                         order.customerName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1925,23 +2004,23 @@ class OrderCard extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
+                              color: infoChipBg,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.person_rounded,
                                   size: 14,
-                                  color: Color(0xFF64748B),
+                                  color: mutedTextColor,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   order.dentalTechnicianName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: Color(0xFF64748B),
+                                    color: mutedTextColor,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -1955,23 +2034,23 @@ class OrderCard extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
+                              color: infoChipBg,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.calendar_today_rounded,
                                   size: 14,
-                                  color: Color(0xFF64748B),
+                                  color: mutedTextColor,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   order.createdAt.split("T").first,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: Color(0xFF64748B),
+                                    color: mutedTextColor,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -1987,18 +2066,15 @@ class OrderCard extends StatelessWidget {
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: actionCardBg,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 1,
-                        ),
+                        border: Border.all(color: borderColor, width: 1),
                       ),
                       child: IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.contactless_outlined,
                           size: 18,
-                          color: Color(0xFF0F172A),
+                          color: titleColor,
                         ),
                         onPressed: () => _writeNfcTag(
                           context,
@@ -2012,18 +2088,15 @@ class OrderCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: actionCardBg,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 1,
-                        ),
+                        border: Border.all(color: borderColor, width: 1),
                       ),
                       child: IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.send_rounded,
                           size: 18,
-                          color: Color(0xFF0F172A),
+                          color: titleColor,
                         ),
                         onPressed: () {
                           showModalBottomSheet(
@@ -2052,14 +2125,14 @@ class OrderCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFDBEAFE),
+                        color: editBg,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.edit_rounded,
                           size: 18,
-                          color: Color(0xFF2563EB),
+                          color: editColor,
                         ),
                         onPressed: () {
                           showModalBottomSheet(
@@ -2092,7 +2165,7 @@ class OrderCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEE2E2),
+                        color: deleteBg,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: IconButton(
@@ -2120,16 +2193,16 @@ class OrderCard extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
+                  color: forwardedBg,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: const Color(0xFFFCD34D)),
+                  border: Border.all(color: forwardedBorder),
                 ),
                 child: Text(
                   'Forwarded from ${order.forwardedFromName}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFFB45309),
+                    color: forwardedText,
                   ),
                 ),
               ),
@@ -2140,12 +2213,12 @@ class OrderCard extends StatelessWidget {
             // Tooth Color
             Row(
               children: [
-                const Text(
+                Text(
                   'Tooth Color:',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF64748B),
+                    color: mutedTextColor,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -2155,15 +2228,15 @@ class OrderCard extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDBEAFE),
+                    color: toothChipBg,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     order.toothColor,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF2563EB),
+                      color: toothChipText,
                     ),
                   ),
                 ),
@@ -2172,12 +2245,12 @@ class OrderCard extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Selected Teeth
-            const Text(
+            Text(
               'Selected Teeth:',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
+                color: mutedTextColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -2192,16 +2265,16 @@ class OrderCard extends StatelessWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: infoChipBg,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        border: Border.all(color: borderColor),
                       ),
                       child: Text(
                         '$tooth',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                         ),
                       ),
                     ),
@@ -2211,40 +2284,36 @@ class OrderCard extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Details
-            const Text(
+            Text(
               'Details:',
               style: TextStyle(
                 fontSize: 13, // Added a default font size
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
+                color: mutedTextColor,
               ),
             ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: detailsBg,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: borderColor),
               ),
               child: Text(
                 order.orderDetails,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF020817),
-                  height: 1.5,
-                ),
+                style: TextStyle(fontSize: 13, color: titleColor, height: 1.5),
               ),
             ),
             const SizedBox(height: 16),
 
             // Files
-            const Text(
+            Text(
               'Files:',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
+                color: mutedTextColor,
               ),
             ),
             const SizedBox(height: 8),

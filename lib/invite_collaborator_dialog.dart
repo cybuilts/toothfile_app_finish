@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 
 class InviteCollaboratorDialog extends StatefulWidget {
   const InviteCollaboratorDialog({super.key});
@@ -300,11 +300,24 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF2B3A55) : const Color(0xFFE2E8F0);
+    final panelColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final softPanel = isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF1F5F9);
+    final titleColor = isDark ? const Color(0xFFE5E7EB) : const Color(0xFF020817);
+    final mutedTextColor = isDark ? const Color(0xFFA8B3C7) : const Color(0xFF64748B);
+    final hintTextColor = isDark ? const Color(0xFF8FA2BF) : const Color(0xFF94A3B8);
+    final bannerBorderColor = isDark
+        ? const Color(0xFF8B5CF6).withOpacity(0.35)
+        : const Color(0xFF8B5CF6).withOpacity(0.2);
+    final bannerTextColor = isDark ? const Color(0xFFD8B4FE) : const Color(0xFF8B5CF6);
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: sheetColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: borderColor, width: 1)),
       ),
       constraints: BoxConstraints(maxHeight: screenHeight * 0.9),
       child: Column(
@@ -316,7 +329,7 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
             height: 4,
             margin: const EdgeInsets.only(top: 12, bottom: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
+              color: borderColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -350,7 +363,7 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -359,16 +372,16 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                           letterSpacing: -0.5,
                         ),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
                         'Send an invitation to join ToothFile',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF64748B),
+                          color: mutedTextColor,
                         ),
                       ),
                     ],
@@ -376,13 +389,13 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: softPanel,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: Color(0xFF64748B),
+                      color: mutedTextColor,
                       size: 20,
                     ),
                     onPressed: _isLoading
@@ -411,14 +424,12 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          const Color(0xFF8B5CF6).withOpacity(0.05),
-                          const Color(0xFF6366F1).withOpacity(0.05),
+                          const Color(0xFF8B5CF6).withOpacity(isDark ? 0.16 : 0.05),
+                          const Color(0xFF6366F1).withOpacity(isDark ? 0.16 : 0.05),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFF8B5CF6).withOpacity(0.2),
-                      ),
+                      border: Border.all(color: bannerBorderColor),
                     ),
                     child: Row(
                       children: [
@@ -437,12 +448,12 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Your colleague will receive an email with instructions to join',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF8B5CF6),
+                              color: bannerTextColor,
                               fontWeight: FontWeight.w500,
                               height: 1.4,
                             ),
@@ -454,12 +465,12 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                   const SizedBox(height: 24),
 
                   // Email Address Field
-                  const Text(
+                  Text(
                     'Email Address',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF020817),
+                      color: titleColor,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -469,12 +480,12 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       hintText: 'colleague@example.com',
-                      hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                      hintStyle: TextStyle(color: hintTextColor),
                       prefixIcon: Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3E8FF),
+                          color: isDark ? const Color(0xFF2A1F46) : const Color(0xFFF3E8FF),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(
@@ -485,11 +496,11 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -499,7 +510,7 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                         ),
                       ),
                       filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
+                      fillColor: panelColor,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 16,
@@ -509,18 +520,18 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                   const SizedBox(height: 20),
 
                   // Personal Message Field
-                  const Text(
+                  Text(
                     'Personal Message (Optional)',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF020817),
+                      color: titleColor,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Add a personal note to your invitation',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 12, color: mutedTextColor),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -530,14 +541,14 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                     decoration: InputDecoration(
                       hintText:
                           'Hi! I\'d like to invite you to collaborate on ToothFile...',
-                      hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                      hintStyle: TextStyle(color: hintTextColor),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -547,7 +558,7 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                         ),
                       ),
                       filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
+                      fillColor: panelColor,
                       contentPadding: const EdgeInsets.all(16),
                     ),
                   ),
@@ -559,10 +570,10 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
           // Bottom Buttons
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: sheetColor,
               border: Border(
-                top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                top: BorderSide(color: borderColor, width: 1),
               ),
             ),
             child: Row(
@@ -574,17 +585,17 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                         : () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      side: BorderSide(color: borderColor),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                        color: mutedTextColor,
                       ),
                     ),
                   ),

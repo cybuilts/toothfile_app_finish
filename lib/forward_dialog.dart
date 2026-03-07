@@ -1,6 +1,8 @@
+// ignore_for_file: unused_import
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 import 'package:touch_bar/touch_bar.dart';
 
 class ForwardDialog extends StatefulWidget {
@@ -286,6 +288,40 @@ class _ForwardDialogState extends State<ForwardDialog> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final softPanel = isDark
+        ? const Color(0xFF1D2A3F)
+        : const Color(0xFFF1F5F9);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final hintTextColor = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final selectedCard = isDark
+        ? const Color(0xFF1E3A8A)
+        : const Color(0xFFDBEAFE);
+    final selectedCardBorder = isDark
+        ? const Color(0xFF3B82F6)
+        : const Color(0xFF2563EB);
+    final selectedEmailColor = isDark
+        ? const Color(0xFFBFDBFE)
+        : const Color(0xFF1E40AF);
+    final roleChipBg = isDark
+        ? const Color(0xFF1D2A3F)
+        : const Color(0xFFDBEAFE);
+    final roleChipText = isDark
+        ? const Color(0xFFBFDBFE)
+        : const Color(0xFF2563EB);
+    final onlineBorder = isDark ? const Color(0xFF111827) : Colors.white;
     final filteredConnections = _connections.where((p) {
       final q = _searchController.text.trim().toLowerCase();
       if (q.isEmpty) return true;
@@ -295,9 +331,10 @@ class _ForwardDialogState extends State<ForwardDialog> {
     }).toList();
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: sheetColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: borderColor, width: 1)),
       ),
       constraints: BoxConstraints(maxHeight: screenHeight * 0.9),
       child: Column(
@@ -309,7 +346,7 @@ class _ForwardDialogState extends State<ForwardDialog> {
             height: 4,
             margin: const EdgeInsets.only(top: 12, bottom: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
+              color: borderColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -343,7 +380,7 @@ class _ForwardDialogState extends State<ForwardDialog> {
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -352,30 +389,27 @@ class _ForwardDialogState extends State<ForwardDialog> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                           letterSpacing: -0.5,
                         ),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
                         'Select a connection to forward to',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF64748B),
-                        ),
+                        style: TextStyle(fontSize: 13, color: mutedTextColor),
                       ),
                     ],
                   ),
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: softPanel,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: Color(0xFF64748B),
+                      color: mutedTextColor,
                       size: 20,
                     ),
                     onPressed: _submitting
@@ -396,9 +430,9 @@ class _ForwardDialogState extends State<ForwardDialog> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cardColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                border: Border.all(color: borderColor, width: 1),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.03),
@@ -409,12 +443,12 @@ class _ForwardDialogState extends State<ForwardDialog> {
               ),
               child: TextField(
                 controller: _searchController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Search connections...',
-                  hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+                  hintStyle: TextStyle(color: hintTextColor),
                   prefixIcon: Icon(
                     Icons.search,
-                    color: Color(0xFF94A3B8),
+                    color: hintTextColor,
                     size: 22,
                   ),
                   border: InputBorder.none,
@@ -441,8 +475,8 @@ class _ForwardDialogState extends State<ForwardDialog> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(24),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF1F5F9),
+                          decoration: BoxDecoration(
+                            color: softPanel,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -452,21 +486,18 @@ class _ForwardDialogState extends State<ForwardDialog> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        const Text(
+                        Text(
                           'No connections found',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF020817),
+                            color: titleColor,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'Connect with users to forward items',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF64748B),
-                          ),
+                          style: TextStyle(fontSize: 14, color: mutedTextColor),
                         ),
                       ],
                     ),
@@ -478,8 +509,8 @@ class _ForwardDialogState extends State<ForwardDialog> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(24),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF1F5F9),
+                          decoration: BoxDecoration(
+                            color: softPanel,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -489,21 +520,18 @@ class _ForwardDialogState extends State<ForwardDialog> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        const Text(
+                        Text(
                           'No matches found',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF020817),
+                            color: titleColor,
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'Try adjusting your search',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF64748B),
-                          ),
+                          style: TextStyle(fontSize: 14, color: mutedTextColor),
                         ),
                       ],
                     ),
@@ -525,14 +553,10 @@ class _ForwardDialogState extends State<ForwardDialog> {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         decoration: BoxDecoration(
-                          color: selected
-                              ? const Color(0xFFDBEAFE)
-                              : Colors.white,
+                          color: selected ? selectedCard : cardColor,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: selected
-                                ? const Color(0xFF2563EB)
-                                : const Color(0xFFE2E8F0),
+                            color: selected ? selectedCardBorder : borderColor,
                             width: selected ? 2 : 1,
                           ),
                           boxShadow: selected
@@ -600,7 +624,7 @@ class _ForwardDialogState extends State<ForwardDialog> {
                                           color: const Color(0xFF22C55E),
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: Colors.white,
+                                            color: onlineBorder,
                                             width: 2.5,
                                           ),
                                         ),
@@ -616,10 +640,10 @@ class _ForwardDialogState extends State<ForwardDialog> {
                                     children: [
                                       Text(
                                         name,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF020817),
+                                          color: titleColor,
                                           height: 1.3,
                                         ),
                                         overflow: TextOverflow.ellipsis,
@@ -635,7 +659,7 @@ class _ForwardDialogState extends State<ForwardDialog> {
                                             decoration: BoxDecoration(
                                               color: selected
                                                   ? const Color(0xFF2563EB)
-                                                  : const Color(0xFFDBEAFE),
+                                                  : roleChipBg,
                                               borderRadius:
                                                   BorderRadius.circular(5),
                                             ),
@@ -646,7 +670,7 @@ class _ForwardDialogState extends State<ForwardDialog> {
                                                 fontWeight: FontWeight.w600,
                                                 color: selected
                                                     ? Colors.white
-                                                    : const Color(0xFF2563EB),
+                                                    : roleChipText,
                                               ),
                                             ),
                                           ),
@@ -657,8 +681,8 @@ class _ForwardDialogState extends State<ForwardDialog> {
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 color: selected
-                                                    ? const Color(0xFF1E40AF)
-                                                    : const Color(0xFF64748B),
+                                                    ? selectedEmailColor
+                                                    : mutedTextColor,
                                               ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -690,12 +714,12 @@ class _ForwardDialogState extends State<ForwardDialog> {
                                   Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFF1F5F9),
+                                      color: softPanel,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.circle_outlined,
-                                      color: Color(0xFF94A3B8),
+                                      color: hintTextColor,
                                       size: 18,
                                     ),
                                   ),
@@ -711,11 +735,9 @@ class _ForwardDialogState extends State<ForwardDialog> {
           // Bottom Buttons
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-              ),
+            decoration: BoxDecoration(
+              color: sheetColor,
+              border: Border(top: BorderSide(color: borderColor, width: 1)),
             ),
             child: Row(
               children: [
@@ -726,17 +748,17 @@ class _ForwardDialogState extends State<ForwardDialog> {
                         : () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      side: BorderSide(color: borderColor),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                        color: mutedTextColor,
                       ),
                     ),
                   ),
@@ -753,7 +775,7 @@ class _ForwardDialogState extends State<ForwardDialog> {
                           : null,
                       color: _selectedUserId != null && !_submitting
                           ? null
-                          : const Color(0xFFF1F5F9),
+                          : softPanel,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: _selectedUserId != null && !_submitting
                           ? [

@@ -8,11 +8,16 @@ import 'dart:typed_data';
 import 'package:uuid/uuid.dart';
 import 'package:archive/archive.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 
 class SendFilesDialog extends StatefulWidget {
   final Map<String, dynamic> userData;
-  const SendFilesDialog({super.key, required this.userData});
+  final List<String> initialFilePaths;
+  const SendFilesDialog({
+    super.key,
+    required this.userData,
+    this.initialFilePaths = const [],
+  });
 
   @override
   State<SendFilesDialog> createState() => _SendFilesDialogState();
@@ -31,6 +36,18 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialFilePaths.isNotEmpty) {
+      _pickedFiles = widget.initialFilePaths
+          .where((path) => File(path).existsSync())
+          .map((path) {
+            final file = File(path);
+            final size = file.lengthSync();
+            final segments = path.split(RegExp(r'[\\/]'));
+            final name = segments.isNotEmpty ? segments.last : path;
+            return PlatformFile(name: name, size: size, path: path);
+          })
+          .toList();
+    }
     TouchBarHelper.setPopupTouchBar(
       context: context,
       actions: [
@@ -89,273 +106,294 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 24),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
-                borderRadius: BorderRadius.circular(2),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+        final borderColor = isDark
+            ? const Color(0xFF2B3A55)
+            : const Color(0xFFE2E8F0);
+        final titleColor = isDark
+            ? const Color(0xFFE5E7EB)
+            : const Color(0xFF020817);
+        final mutedTextColor = isDark
+            ? const Color(0xFFA8B3C7)
+            : const Color(0xFF64748B);
+        final unselectedTextColor = isDark
+            ? const Color(0xFFE5E7EB)
+            : const Color(0xFF020817);
+        return Container(
+          decoration: BoxDecoration(
+            color: sheetColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: borderColor, width: 1)),
+          ),
+
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFF59E0B).withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.palette_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Select Tooth Color',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF020817),
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Vita Classic Shade Guide',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 500),
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _toothColorGroups.length,
-                itemBuilder: (context, groupIndex) {
-                  final groupKey = _toothColorGroups.keys.elementAt(groupIndex);
-                  final colors = _toothColorGroups[groupKey]!;
-                  final groupColor = _getShadeGroupColor(groupKey);
-                  final accentColor = _getShadeGroupAccent(groupKey);
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: groupColor,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: accentColor.withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 16,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: accentColor,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: accentColor.withOpacity(0.4),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Shade Group $groupKey',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: accentColor,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 5,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                                childAspectRatio: 1.1,
-                              ),
-                          itemCount: colors.length,
-                          itemBuilder: (context, index) {
-                            final color = colors[index];
-                            final isSelected = _selectedToothColor == color;
-
-                            return InkWell(
-                              onTap: () {
-                                setState(() => _selectedToothColor = color);
-                                Navigator.pop(context);
-                              },
-                              borderRadius: BorderRadius.circular(14),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                decoration: BoxDecoration(
-                                  gradient: isSelected
-                                      ? const LinearGradient(
-                                          colors: [
-                                            Color(0xFF8B5CF6),
-                                            Color(0xFF6366F1),
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        )
-                                      : null,
-                                  color: isSelected ? null : groupColor,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? const Color(0xFF8B5CF6)
-                                        : accentColor.withOpacity(0.2),
-                                    width: isSelected ? 3 : 2,
-                                  ),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: const Color(
-                                              0xFF8B5CF6,
-                                            ).withOpacity(0.4),
-                                            blurRadius: 12,
-                                            offset: const Offset(0, 6),
-                                          ),
-                                        ]
-                                      : [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(
-                                              0.04,
-                                            ),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    if (isSelected)
-                                      Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.25),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.check_circle_rounded,
-                                          color: Colors.white,
-                                          size: 24,
-                                        ),
-                                      )
-                                    else
-                                      Container(
-                                        width: 28,
-                                        height: 28,
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              groupColor,
-                                              accentColor.withOpacity(0.3),
-                                            ],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          ),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: accentColor.withOpacity(0.4),
-                                            width: 2,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: accentColor.withOpacity(
-                                                0.3,
-                                              ),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      color,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : const Color(0xFF020817),
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFF59E0B).withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                  );
-                },
+                    child: const Icon(
+                      Icons.palette_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Select Tooth Color',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: titleColor,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Vita Classic Shade Guide',
+                          style: TextStyle(fontSize: 13, color: mutedTextColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+              const SizedBox(height: 24),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 500),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _toothColorGroups.length,
+                  itemBuilder: (context, groupIndex) {
+                    final groupKey = _toothColorGroups.keys.elementAt(
+                      groupIndex,
+                    );
+                    final colors = _toothColorGroups[groupKey]!;
+                    final groupColor = _getShadeGroupColor(groupKey);
+                    final accentColor = _getShadeGroupAccent(groupKey);
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: groupColor,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: accentColor.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: accentColor,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: accentColor.withOpacity(0.4),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Shade Group $groupKey',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: accentColor,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 5,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                  childAspectRatio: 1.1,
+                                ),
+                            itemCount: colors.length,
+                            itemBuilder: (context, index) {
+                              final color = colors[index];
+                              final isSelected = _selectedToothColor == color;
+
+                              return InkWell(
+                                onTap: () {
+                                  setState(() => _selectedToothColor = color);
+                                  Navigator.pop(context);
+                                },
+                                borderRadius: BorderRadius.circular(14),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  decoration: BoxDecoration(
+                                    gradient: isSelected
+                                        ? const LinearGradient(
+                                            colors: [
+                                              Color(0xFF8B5CF6),
+                                              Color(0xFF6366F1),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          )
+                                        : null,
+                                    color: isSelected ? null : groupColor,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? const Color(0xFF8B5CF6)
+                                          : accentColor.withOpacity(0.2),
+                                      width: isSelected ? 3 : 2,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF8B5CF6,
+                                              ).withOpacity(0.4),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 6),
+                                            ),
+                                          ]
+                                        : [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.04,
+                                              ),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      if (isSelected)
+                                        Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(
+                                              0.25,
+                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.check_circle_rounded,
+                                            color: Colors.white,
+                                            size: 24,
+                                          ),
+                                        )
+                                      else
+                                        Container(
+                                          width: 28,
+                                          height: 28,
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                groupColor,
+                                                accentColor.withOpacity(0.3),
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: accentColor.withOpacity(
+                                                0.4,
+                                              ),
+                                              width: 2,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: accentColor.withOpacity(
+                                                  0.3,
+                                                ),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        color,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : unselectedTextColor,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -490,18 +528,32 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
         context: context,
         backgroundColor: Colors.transparent,
         builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+          final borderColor = isDark
+              ? const Color(0xFF2B3A55)
+              : const Color(0xFFE2E8F0);
+          final titleColor = isDark
+              ? const Color(0xFFE5E7EB)
+              : const Color(0xFF020817);
           return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            decoration: BoxDecoration(
+              color: sheetColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+              border: Border(top: BorderSide(color: borderColor, width: 1)),
             ),
             child: SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.folder_open_rounded),
-                    title: const Text('Choose File'),
+                    leading: Icon(Icons.folder_open_rounded, color: titleColor),
+                    title: Text(
+                      'Choose File',
+                      style: TextStyle(color: titleColor),
+                    ),
                     onTap: () async {
                       Navigator.pop(context);
                       await _pickFiles();
@@ -854,11 +906,45 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final panelColor = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF8FAFC);
+    final softPanel = isDark
+        ? const Color(0xFF1D2A3F)
+        : const Color(0xFFF1F5F9);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final hintTextColor = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final selectedInfoBorder = isDark
+        ? const Color(0xFF2E4365)
+        : const Color(0xFFE2E8F0);
+    final roleChipBg = isDark
+        ? const Color(0xFF1E3A8A)
+        : const Color(0xFFDBEAFE);
+    final roleChipText = isDark
+        ? const Color(0xFFBFDBFE)
+        : const Color(0xFF2563EB);
+    final onlineBorder = isDark ? const Color(0xFF111827) : Colors.white;
+    final dangerSoft = isDark
+        ? const Color(0xFF3B1A1A)
+        : const Color(0xFFFEE2E2);
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: sheetColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: borderColor, width: 1)),
       ),
       constraints: BoxConstraints(maxHeight: screenHeight * 0.9),
       child: Column(
@@ -870,7 +956,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
             height: 4,
             margin: const EdgeInsets.only(top: 12, bottom: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
+              color: borderColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -904,7 +990,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -913,30 +999,27 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                           letterSpacing: -0.5,
                         ),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
                         'Share files with user',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF64748B),
-                        ),
+                        style: TextStyle(fontSize: 13, color: mutedTextColor),
                       ),
                     ],
                   ),
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: softPanel,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: Color(0xFF64748B),
+                      color: mutedTextColor,
                       size: 20,
                     ),
                     onPressed: _isLoading
@@ -965,12 +1048,16 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          const Color(0xFF8B5CF6).withOpacity(0.05),
-                          const Color(0xFF6366F1).withOpacity(0.05),
+                          const Color(
+                            0xFF8B5CF6,
+                          ).withOpacity(isDark ? 0.16 : 0.05),
+                          const Color(
+                            0xFF6366F1,
+                          ).withOpacity(isDark ? 0.16 : 0.05),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: selectedInfoBorder),
                     ),
                     child: Row(
                       children: [
@@ -1014,7 +1101,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                   color: const Color(0xFF22C55E),
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: Colors.white,
+                                    color: onlineBorder,
                                     width: 2,
                                   ),
                                 ),
@@ -1029,10 +1116,10 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                             children: [
                               Text(
                                 widget.userData['name'] ?? 'Unknown User',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF020817),
+                                  color: titleColor,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1045,15 +1132,15 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFDBEAFE),
+                                      color: roleChipBg,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       widget.userData['role'] ?? 'User',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
-                                        color: Color(0xFF2563EB),
+                                        color: roleChipText,
                                       ),
                                     ),
                                   ),
@@ -1061,9 +1148,9 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                   Flexible(
                                     child: Text(
                                       widget.userData['email'] ?? 'N/A',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 11,
-                                        color: Color(0xFF64748B),
+                                        color: mutedTextColor,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1089,14 +1176,15 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            const Color(0xFF8B5CF6).withOpacity(0.05),
-                            const Color(0xFF6366F1).withOpacity(0.05),
+                            const Color(
+                              0xFF8B5CF6,
+                            ).withOpacity(isDark ? 0.16 : 0.05),
+                            const Color(
+                              0xFF6366F1,
+                            ).withOpacity(isDark ? 0.16 : 0.05),
                           ],
                         ),
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 2,
-                        ),
+                        border: Border.all(color: borderColor, width: 2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -1125,20 +1213,20 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
+                          Text(
                             'Click to choose files',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF020817),
+                              color: titleColor,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${_pickedFiles.length} file${_pickedFiles.length != 1 ? 's' : ''} selected',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF64748B),
+                              color: mutedTextColor,
                             ),
                           ),
                         ],
@@ -1157,12 +1245,16 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              const Color(0xFF8B5CF6).withOpacity(0.05),
-                              const Color(0xFF6366F1).withOpacity(0.05),
+                              const Color(
+                                0xFF8B5CF6,
+                              ).withOpacity(isDark ? 0.16 : 0.05),
+                              const Color(
+                                0xFF6366F1,
+                              ).withOpacity(isDark ? 0.16 : 0.05),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: borderColor),
                         ),
                         child: Row(
                           children: [
@@ -1177,9 +1269,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                         ],
                                       )
                                     : null,
-                                color: _compressAsZip
-                                    ? null
-                                    : const Color(0xFFF1F5F9),
+                                color: _compressAsZip ? null : softPanel,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
@@ -1187,11 +1277,11 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                 size: 18,
                                 color: _compressAsZip
                                     ? Colors.white
-                                    : const Color(0xFF64748B),
+                                    : mutedTextColor,
                               ),
                             ),
                             const SizedBox(width: 12),
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -1200,15 +1290,15 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF020817),
+                                      color: titleColor,
                                     ),
                                   ),
-                                  SizedBox(height: 2),
+                                  const SizedBox(height: 2),
                                   Text(
                                     'Bundle all files into one archive',
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: Color(0xFF64748B),
+                                      color: mutedTextColor,
                                     ),
                                   ),
                                 ],
@@ -1235,9 +1325,9 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: panelColor,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: borderColor),
                         ),
                         child: Row(
                           children: [
@@ -1265,19 +1355,19 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                 children: [
                                   Text(
                                     file.name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF020817),
+                                      color: titleColor,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     '$sizeInKB KB',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
-                                      color: Color(0xFF64748B),
+                                      color: mutedTextColor,
                                     ),
                                   ),
                                 ],
@@ -1285,7 +1375,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                             ),
                             Container(
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFEE2E2),
+                                color: dangerSoft,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: IconButton(
@@ -1310,9 +1400,9 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: panelColor,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: borderColor),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1336,7 +1426,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                     ),
                                   ),
                                   const SizedBox(width: 10),
-                                  const Expanded(
+                                  Expanded(
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -1346,7 +1436,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600,
-                                            color: Color(0xFF020817),
+                                            color: titleColor,
                                           ),
                                         ),
                                         SizedBox(height: 2),
@@ -1354,7 +1444,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                           'Add case details',
                                           style: TextStyle(
                                             fontSize: 11,
-                                            color: Color(0xFF64748B),
+                                            color: mutedTextColor,
                                           ),
                                         ),
                                       ],
@@ -1376,16 +1466,16 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                         ),
                         if (_advancedOptionsEnabled) ...[
                           const SizedBox(height: 16),
-                          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                          Divider(height: 1, color: borderColor),
                           const SizedBox(height: 16),
 
                           // Customer Name
-                          const Text(
+                          Text(
                             'Customer Name',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF020817),
+                              color: titleColor,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -1394,7 +1484,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                             decoration: InputDecoration(
                               hintText: 'Enter customer name',
                               hintStyle: const TextStyle(
-                                color: Color(0xFF94A3B8),
+                                color: Color(0xFF8FA2BF),
                               ),
                               prefixIcon: Container(
                                 margin: const EdgeInsets.all(10),
@@ -1411,15 +1501,11 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE2E8F0),
-                                ),
+                                borderSide: BorderSide(color: borderColor),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFFE2E8F0),
-                                ),
+                                borderSide: BorderSide(color: borderColor),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -1429,7 +1515,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                 ),
                               ),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: sheetColor,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 14,
                                 vertical: 14,
@@ -1439,12 +1525,12 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                           const SizedBox(height: 16),
 
                           // Tooth Color
-                          const Text(
+                          Text(
                             'Tooth Color (Vita Classic Guide)',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF020817),
+                              color: titleColor,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -1454,10 +1540,8 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                             child: Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                border: Border.all(
-                                  color: const Color(0xFFE2E8F0),
-                                ),
+                                color: sheetColor,
+                                border: Border.all(color: borderColor),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Row(
@@ -1513,8 +1597,8 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                                 ? FontWeight.w600
                                                 : FontWeight.w400,
                                             color: _selectedToothColor != null
-                                                ? const Color(0xFF020817)
-                                                : const Color(0xFF94A3B8),
+                                                ? titleColor
+                                                : hintTextColor,
                                           ),
                                         ),
                                         if (_selectedToothColor != null)
@@ -1552,9 +1636,9 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                       ],
                                     ),
                                   ),
-                                  const Icon(
+                                  Icon(
                                     Icons.keyboard_arrow_down_rounded,
-                                    color: Color(0xFF64748B),
+                                    color: mutedTextColor,
                                     size: 20,
                                   ),
                                 ],
@@ -1564,20 +1648,20 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                           const SizedBox(height: 16),
 
                           // Dental Chart
-                          const Text(
+                          Text(
                             'Dental Chart - Select Teeth',
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF020817),
+                              color: titleColor,
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
+                          Text(
                             'Tap on teeth to select or deselect',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF64748B),
+                              color: mutedTextColor,
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -1587,14 +1671,15 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  const Color(0xFF2563EB).withOpacity(0.05),
-                                  const Color(0xFF8B5CF6).withOpacity(0.05),
+                                  const Color(
+                                    0xFF2563EB,
+                                  ).withOpacity(isDark ? 0.16 : 0.05),
+                                  const Color(
+                                    0xFF8B5CF6,
+                                  ).withOpacity(isDark ? 0.16 : 0.05),
                                 ],
                               ),
-                              border: Border.all(
-                                color: const Color(0xFFE2E8F0),
-                                width: 2,
-                              ),
+                              border: Border.all(color: borderColor, width: 2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             padding: const EdgeInsets.all(16),
@@ -1615,11 +1700,9 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: sheetColor,
                                       borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: const Color(0xFFE2E8F0),
-                                      ),
+                                      border: Border.all(color: borderColor),
                                     ),
                                     child: Column(
                                       crossAxisAlignment:
@@ -1648,10 +1731,10 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                             const SizedBox(width: 8),
                                             Text(
                                               '${_selectedTeeth.length} ${_selectedTeeth.length == 1 ? 'tooth' : 'teeth'} selected',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w600,
-                                                color: Color(0xFF020817),
+                                                color: titleColor,
                                               ),
                                             ),
                                           ],
@@ -1720,12 +1803,12 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                   const SizedBox(height: 20),
 
                   // Message Field
-                  const Text(
+                  Text(
                     'Message (Optional)',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF020817),
+                      color: titleColor,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1735,18 +1818,18 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                     decoration: InputDecoration(
                       hintText: 'Enter your message here...',
                       hintStyle: const TextStyle(
-                        color: Color(0xFF94A3B8),
+                        color: Color(0xFF8FA2BF),
                         fontSize: 13,
                       ),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: sheetColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderSide: BorderSide(color: borderColor),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -1767,11 +1850,9 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
           // Bottom Buttons
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-              ),
+            decoration: BoxDecoration(
+              color: sheetColor,
+              border: Border(top: BorderSide(color: borderColor, width: 1)),
             ),
             child: Row(
               children: [
@@ -1782,17 +1863,17 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                         : () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      side: BorderSide(color: borderColor),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                        color: mutedTextColor,
                       ),
                     ),
                   ),

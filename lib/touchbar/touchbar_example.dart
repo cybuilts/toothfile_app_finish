@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 
 // Example usage of the new TouchBar helper methods
 class TouchBarExample extends StatelessWidget {
@@ -50,7 +50,9 @@ class TouchBarExample extends StatelessWidget {
       ],
       builder: (context) => AlertDialog(
         title: const Text('Dialog with TouchBar'),
-        content: const Text('This dialog has TouchBar buttons that will disappear when closed.'),
+        content: const Text(
+          'This dialog has TouchBar buttons that will disappear when closed.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, 'cancelled'),
@@ -63,7 +65,7 @@ class TouchBarExample extends StatelessWidget {
         ],
       ),
     );
-    
+
     // TouchBar is automatically cleared here!
     print('Dialog closed - TouchBar should be cleared');
   }
@@ -93,7 +95,7 @@ class TouchBarExample extends StatelessWidget {
         ),
       ),
     );
-    
+
     // TouchBar is automatically cleared here!
     print('Bottom sheet closed - TouchBar should be cleared');
   }
@@ -115,7 +117,9 @@ class TouchBarExample extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Manual TouchBar'),
-        content: const Text('This uses the old manual way - TouchBar may not clear properly.'),
+        content: const Text(
+          'This uses the old manual way - TouchBar may not clear properly.',
+        ),
         actions: [
           TextButton(
             onPressed: () {

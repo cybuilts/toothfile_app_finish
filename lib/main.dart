@@ -1,15 +1,20 @@
+// ignore_for_file: unused_element, unused_local_variable
+
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:toothfile/dashboard_page.dart';
+import 'package:toothfile/quick_share_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toothfile/supabase_auth_service.dart';
 // import 'package:firebase_core/firebase_core.dart';  // Temporarily disabled for Windows Release build
 // import 'package:firebase_messaging/firebase_messaging.dart';  // Temporarily disabled for Windows Release build
 import 'package:toothfile/push_notification_service.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Optional local notifications for mobile platforms only
 // Removed global plugin setup on desktop to avoid unsupported initialization
@@ -17,22 +22,92 @@ import 'package:toothfile/touch_bar_helper.dart';
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 bool _supabaseReady = false;
 String? _initError;
+final ValueNotifier<ThemeMode> appThemeModeNotifier = ValueNotifier(
+  ThemeMode.system,
+);
 
 // MethodChannel for Windows Deep Linking
 const _methodChannel = MethodChannel('com.example.toothfile/deeplink');
 
-Future<void> main() async {
+ThemeMode themeModeFromPreference(String theme) {
+  switch (theme) {
+    case 'light':
+      return ThemeMode.light;
+    case 'dark':
+      return ThemeMode.dark;
+    case 'system':
+    default:
+      return ThemeMode.system;
+  }
+}
+
+void updateAppThemeMode(String theme) {
+  appThemeModeNotifier.value = themeModeFromPreference(theme);
+}
+
+void _openSendTabIfSignedIn() {
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) {
+    return;
+  }
+  final navigator = _navigatorKey.currentState;
+  if (navigator == null) {
+    return;
+  }
+  navigator.pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const DashboardPage(initialIndex: 1)),
+    (route) => false,
+  );
+}
+
+List<String> _extractQuickSharePaths(List<String> args) {
+  if (args.isEmpty) {
+    return [];
+  }
+  final paths = <String>[];
+  var quickShareMode = false;
+  for (final arg in args) {
+    if (arg == '--quick-share') {
+      quickShareMode = true;
+      continue;
+    }
+    if (quickShareMode || File(arg).existsSync()) {
+      paths.add(arg);
+    }
+  }
+  return paths;
+}
+
+Future<void> _handleWindowsLaunchPayload(String payload) async {
+  if (payload.trim().isEmpty) {
+    return;
+  }
+  final uri = Uri.tryParse(payload);
+  if (uri != null && uri.scheme == 'io.supabase.toothfile') {
+    await Supabase.instance.client.auth.getSessionFromUrl(uri);
+    return;
+  }
+  final args = payload.contains('\n')
+      ? payload.split('\n').where((value) => value.trim().isNotEmpty).toList()
+      : [payload];
+  final quickSharePaths = _extractQuickSharePaths(args);
+  if (quickSharePaths.isEmpty) {
+    return;
+  }
+  QuickShareService.addPendingFiles(quickSharePaths);
+  _openSendTabIfSignedIn();
+}
+
+Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Set up MethodCallHandler for Deep Links (Windows)
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
     _methodChannel.setMethodCallHandler((call) async {
       if (call.method == 'onDeepLink') {
-        final String url = call.arguments as String;
+        final String payload = call.arguments as String;
         try {
-          final uri = Uri.parse(url);
-          // Manually handle the OAuth callback
-          await Supabase.instance.client.auth.getSessionFromUrl(uri);
+          await _handleWindowsLaunchPayload(payload);
         } catch (e) {
           debugPrint('Error handling deep link: $e');
         }
@@ -73,6 +148,11 @@ Future<void> main() async {
   }
 
   PushNotificationService.initialize(_navigatorKey);
+
+  QuickShareService.addPendingFiles(_extractQuickSharePaths(args));
+
+  // P2P functionality removed - no initialization needed
+
   runApp(const MyApp());
 }
 
@@ -85,27 +165,54 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ToothFile',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2563EB)),
-        useMaterial3: true,
-      ),
-      navigatorKey: _navigatorKey,
-      home: StreamBuilder<AuthState>(
-        stream: SupabaseAuthService.authStateChanges,
-        builder: (context, snapshot) {
-          if (!_supabaseReady) return const AuthPage();
-          final user = Supabase.instance.client.auth.currentUser;
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
 
-          if (user != null) {
-            return const DashboardPage();
-          } else {
-            return const AuthPage();
-          }
-        },
-      ),
+  Future<void> _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    final theme = prefs.getString('selected_theme') ?? 'system';
+    appThemeModeNotifier.value = themeModeFromPreference(theme);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: appThemeModeNotifier,
+      builder: (context, themeMode, child) {
+        return MaterialApp(
+          title: 'ToothFile',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2563EB)),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF2563EB),
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          themeMode: themeMode,
+          navigatorKey: _navigatorKey,
+          home: StreamBuilder<AuthState>(
+            stream: SupabaseAuthService.authStateChanges,
+            builder: (context, snapshot) {
+              if (!_supabaseReady) return const AuthPage();
+              final user = Supabase.instance.client.auth.currentUser;
+
+              if (user != null) {
+                return DashboardPage(
+                  initialIndex: QuickShareService.hasPendingFiles ? 1 : null,
+                );
+              } else {
+                return const AuthPage();
+              }
+            },
+          ),
+        );
+      },
     );
   }
 }

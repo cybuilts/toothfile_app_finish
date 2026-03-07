@@ -1,7 +1,8 @@
 import 'package:toothfile/send_files_page.dart';
 import 'package:flutter/material.dart';
+import 'package:toothfile/quick_share_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 import 'package:touch_bar/touch_bar.dart';
 
 class SendFilesTab extends StatefulWidget {
@@ -120,6 +121,32 @@ class _SendFilesTabState extends State<SendFilesTab> {
   }
 
   void _showRoleFilter() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final roleSelectedBg = isDark
+        ? const Color(0xFF2A1F46)
+        : const Color(0xFFF3E8FF);
+    final roleSelectedBorder = isDark
+        ? const Color(0xFF5B3F8C)
+        : const Color(0xFFD8B4FE);
+    final roleUnselectedIconBg = isDark
+        ? const Color(0xFF1D2A3F)
+        : const Color(0xFFF1F5F9);
+    final roleSelectedText = isDark
+        ? const Color(0xFFD8B4FE)
+        : const Color(0xFF5B21B6);
+    final roleUnselectedText = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF0F172A);
+    final roleUnselectedIcon = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -165,6 +192,11 @@ class _SendFilesTabState extends State<SendFilesTab> {
           ],
         );
         return Container(
+          decoration: BoxDecoration(
+            color: sheetColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border(top: BorderSide(color: borderColor, width: 1)),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -174,11 +206,11 @@ class _SendFilesTabState extends State<SendFilesTab> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE2E8F0),
+                  color: borderColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Align(
                   alignment: Alignment.centerLeft,
@@ -187,7 +219,7 @@ class _SendFilesTabState extends State<SendFilesTab> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF020817),
+                      color: titleColor,
                     ),
                   ),
                 ),
@@ -216,13 +248,11 @@ class _SendFilesTabState extends State<SendFilesTab> {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFFF3E8FF)
-                            : Colors.transparent,
+                        color: isSelected ? roleSelectedBg : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isSelected
-                              ? const Color(0xFFD8B4FE)
+                              ? roleSelectedBorder
                               : Colors.transparent,
                         ),
                       ),
@@ -233,7 +263,7 @@ class _SendFilesTabState extends State<SendFilesTab> {
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? const Color(0xFF8B5CF6)
-                                  : const Color(0xFFF1F5F9),
+                                  : roleUnselectedIconBg,
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -245,7 +275,7 @@ class _SendFilesTabState extends State<SendFilesTab> {
                               size: 16,
                               color: isSelected
                                   ? Colors.white
-                                  : const Color(0xFF64748B),
+                                  : roleUnselectedIcon,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -262,8 +292,8 @@ class _SendFilesTabState extends State<SendFilesTab> {
                                     ? FontWeight.w600
                                     : FontWeight.w500,
                                 color: isSelected
-                                    ? const Color(0xFF5B21B6)
-                                    : const Color(0xFF0F172A),
+                                    ? roleSelectedText
+                                    : roleUnselectedText,
                               ),
                             ),
                           ),
@@ -293,9 +323,33 @@ class _SendFilesTabState extends State<SendFilesTab> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageColor = isDark
+        ? const Color(0xFF0B1220)
+        : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final hintTextColor = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final chipBg = isDark ? const Color(0xFF2A1F46) : const Color(0xFFF3E8FF);
+    final chipText = isDark ? const Color(0xFFD8B4FE) : const Color(0xFF8B5CF6);
+    final emptyBg = isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF1F5F9);
+    final errorBg = isDark ? const Color(0xFF3B1A1A) : const Color(0xFFFEF2F2);
+    final headerIconBg = isDark
+        ? const Color(0xFF2A1F46)
+        : const Color(0xFFF3E8FF);
 
     return Container(
-      color: const Color(0xFFF8FAFC),
+      color: pageColor,
       child: SafeArea(
         top: false,
         child: Column(
@@ -317,7 +371,7 @@ class _SendFilesTabState extends State<SendFilesTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF3E8FF),
+                          color: headerIconBg,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -333,24 +387,21 @@ class _SendFilesTabState extends State<SendFilesTab> {
                           style: TextStyle(
                             fontSize: isMobile ? 22 : 24,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF020817),
+                            color: titleColor,
                             letterSpacing: -0.5,
                           ),
                         ),
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cardColor,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1,
-                          ),
+                          border: Border.all(color: borderColor, width: 1),
                         ),
                         child: IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.refresh,
-                            color: Color(0xFF64748B),
+                            color: mutedTextColor,
                             size: 20,
                           ),
                           onPressed: _fetchUsers,
@@ -361,9 +412,9 @@ class _SendFilesTabState extends State<SendFilesTab> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Share files with your connected dental technicians',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 14, color: mutedTextColor),
                   ),
                 ],
               ),
@@ -378,12 +429,9 @@ class _SendFilesTabState extends State<SendFilesTab> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardColor,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 1,
-                        ),
+                        border: Border.all(color: borderColor, width: 1),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
@@ -394,12 +442,12 @@ class _SendFilesTabState extends State<SendFilesTab> {
                       ),
                       child: TextField(
                         controller: _searchController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Search by name or email...',
-                          hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+                          hintStyle: TextStyle(color: hintTextColor),
                           prefixIcon: Icon(
                             Icons.search,
-                            color: Color(0xFF94A3B8),
+                            color: hintTextColor,
                             size: 20,
                           ),
                           border: InputBorder.none,
@@ -414,12 +462,9 @@ class _SendFilesTabState extends State<SendFilesTab> {
                   const SizedBox(width: 12),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFFE2E8F0),
-                        width: 1,
-                      ),
+                      border: Border.all(color: borderColor, width: 1),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.03),
@@ -429,9 +474,9 @@ class _SendFilesTabState extends State<SendFilesTab> {
                       ],
                     ),
                     child: IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.filter_list,
-                        color: Color(0xFF64748B),
+                        color: mutedTextColor,
                         size: 22,
                       ),
                       onPressed: _showRoleFilter,
@@ -461,9 +506,9 @@ class _SendFilesTabState extends State<SendFilesTab> {
                       _updateTouchBar();
                     });
                   },
-                  backgroundColor: const Color(0xFFF3E8FF),
-                  labelStyle: const TextStyle(
-                    color: Color(0xFF8B5CF6),
+                  backgroundColor: chipBg,
+                  labelStyle: TextStyle(
+                    color: chipText,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -482,8 +527,8 @@ class _SendFilesTabState extends State<SendFilesTab> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFEF2F2),
+                            decoration: BoxDecoration(
+                              color: errorBg,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -495,9 +540,11 @@ class _SendFilesTabState extends State<SendFilesTab> {
                           const SizedBox(height: 20),
                           Text(
                             _errorMessage!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
-                              color: Color(0xFFEF4444),
+                              color: isDark
+                                  ? const Color(0xFFFCA5A5)
+                                  : const Color(0xFFEF4444),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -511,8 +558,8 @@ class _SendFilesTabState extends State<SendFilesTab> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
+                            decoration: BoxDecoration(
+                              color: emptyBg,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -522,20 +569,20 @@ class _SendFilesTabState extends State<SendFilesTab> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          const Text(
+                          Text(
                             'No connected users',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF020817),
+                              color: titleColor,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             'Connect with users to share files',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF64748B),
+                              color: mutedTextColor,
                             ),
                           ),
                         ],
@@ -566,13 +613,32 @@ class _SendFilesTabState extends State<SendFilesTab> {
     final userEmail = user['email'] ?? 'N/A';
     final userRole = user['role'] ?? 'User';
     final userInitials = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final emailBg = isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF1F5F9);
+    final onlineBorder = isDark ? const Color(0xFF111827) : Colors.white;
+    final roleChipBg = isDark
+        ? const Color(0xFF1E3A8A)
+        : const Color(0xFFDBEAFE);
+    final roleChipText = isDark
+        ? const Color(0xFFBFDBFE)
+        : const Color(0xFF2563EB);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+        border: Border.all(color: borderColor, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -623,7 +689,7 @@ class _SendFilesTabState extends State<SendFilesTab> {
                         decoration: BoxDecoration(
                           color: const Color(0xFF22C55E),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2.5),
+                          border: Border.all(color: onlineBorder, width: 2.5),
                         ),
                       ),
                     ),
@@ -638,10 +704,10 @@ class _SendFilesTabState extends State<SendFilesTab> {
                     children: [
                       Text(
                         userName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                           height: 1.3,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -655,15 +721,15 @@ class _SendFilesTabState extends State<SendFilesTab> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDBEAFE),
+                              color: roleChipBg,
                               borderRadius: BorderRadius.circular(5),
                             ),
                             child: Text(
                               userRole,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF2563EB),
+                                color: roleChipText,
                               ),
                             ),
                           ),
@@ -683,23 +749,20 @@ class _SendFilesTabState extends State<SendFilesTab> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: emailBg,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.email_outlined,
                     size: 14,
-                    color: Color(0xFF64748B),
+                    color: mutedTextColor,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     userEmail,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF64748B),
-                    ),
+                    style: TextStyle(fontSize: 13, color: mutedTextColor),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -708,7 +771,7 @@ class _SendFilesTabState extends State<SendFilesTab> {
 
             const SizedBox(height: 16),
 
-            // Send Files Button (Full Width)
+            // Action Button - Simplified to P2P Transfer Only
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -728,12 +791,17 @@ class _SendFilesTabState extends State<SendFilesTab> {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () {
+                    // Traditional file sending (P2P removed)
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
                       builder: (BuildContext context) {
-                        return SendFilesDialog(userData: user);
+                        return SendFilesDialog(
+                          userData: user,
+                          initialFilePaths:
+                              QuickShareService.consumePendingFiles(),
+                        );
                       },
                     ).then((_) => _updateTouchBar());
                   },

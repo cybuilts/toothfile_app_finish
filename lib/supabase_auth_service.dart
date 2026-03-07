@@ -1,3 +1,4 @@
+// ignore_for_file: unused_import
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart' deferred as google_signin;

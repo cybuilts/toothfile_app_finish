@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -6,7 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'forward_dialog.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 import 'package:touch_bar/touch_bar.dart';
 
 class ReceivedFilesTab extends StatefulWidget {
@@ -110,6 +112,20 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
   }
 
   Future<void> _deleteFile(String fileId, String fileName) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final bodyTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final dangerIconBg = isDark
+        ? const Color(0xFF3B1A1A)
+        : const Color(0xFFFEE2E2);
     final confirm = await TouchBarHelper.showModalBottomSheetWithTouchBar<bool>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -125,9 +141,10 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
         ),
       ],
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: sheetColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border(top: BorderSide(color: borderColor, width: 1)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -138,14 +155,14 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 20),
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: borderColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFEE2E2),
+              decoration: BoxDecoration(
+                color: dangerIconBg,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -155,19 +172,19 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Delete File?',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF020817),
+                color: titleColor,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Are you sure you want to delete "$fileName"? This action cannot be undone.',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+              style: TextStyle(fontSize: 14, color: bodyTextColor),
             ),
             const SizedBox(height: 24),
             Row(
@@ -177,17 +194,17 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
                     onPressed: () => Navigator.pop(context, false),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      side: BorderSide(color: borderColor),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                        color: bodyTextColor,
                       ),
                     ),
                   ),
@@ -314,9 +331,31 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageColor = isDark
+        ? const Color(0xFF0B1220)
+        : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final hintTextColor = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final errorBg = isDark ? const Color(0xFF3B1A1A) : const Color(0xFFFEF2F2);
+    final emptyBg = isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF1F5F9);
+    final headerIconBg = isDark
+        ? const Color(0xFF1B3A2A)
+        : const Color(0xFFDCFCE7);
 
     return Container(
-      color: const Color(0xFFF8FAFC),
+      color: pageColor,
       child: SafeArea(
         top: false,
         child: Column(
@@ -338,7 +377,7 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
+                          color: headerIconBg,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -354,24 +393,21 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
                           style: TextStyle(
                             fontSize: isMobile ? 22 : 24,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF020817),
+                            color: titleColor,
                             letterSpacing: -0.5,
                           ),
                         ),
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cardColor,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1,
-                          ),
+                          border: Border.all(color: borderColor, width: 1),
                         ),
                         child: IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.refresh,
-                            color: Color(0xFF64748B),
+                            color: mutedTextColor,
                             size: 20,
                           ),
                           onPressed: _fetchReceivedFiles,
@@ -382,9 +418,9 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Files shared with you by other users',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 14, color: mutedTextColor),
                   ),
                 ],
               ),
@@ -396,9 +432,9 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
               padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                  border: Border.all(color: borderColor, width: 1),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -409,12 +445,12 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
                 ),
                 child: TextField(
                   controller: _searchController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Search files, senders, or messages...',
-                    hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+                    hintStyle: TextStyle(color: hintTextColor),
                     prefixIcon: Icon(
                       Icons.search,
-                      color: Color(0xFF94A3B8),
+                      color: hintTextColor,
                       size: 20,
                     ),
                     border: InputBorder.none,
@@ -439,8 +475,8 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFEF2F2),
+                            decoration: BoxDecoration(
+                              color: errorBg,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -452,9 +488,11 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
                           const SizedBox(height: 20),
                           Text(
                             _errorMessage!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
-                              color: Color(0xFFEF4444),
+                              color: isDark
+                                  ? const Color(0xFFFCA5A5)
+                                  : const Color(0xFFEF4444),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -468,8 +506,8 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
+                            decoration: BoxDecoration(
+                              color: emptyBg,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -479,12 +517,12 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          const Text(
+                          Text(
                             'No received files',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF020817),
+                              color: titleColor,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -492,9 +530,9 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
                             _searchController.text.isNotEmpty
                                 ? 'No files match your search'
                                 : 'Files shared with you will appear here',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF64748B),
+                              color: mutedTextColor,
                             ),
                           ),
                         ],
@@ -714,10 +752,19 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
         ),
       ],
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+        final borderColor = isDark
+            ? const Color(0xFF2B3A55)
+            : const Color(0xFFE2E8F0);
+        final titleColor = isDark
+            ? const Color(0xFFE5E7EB)
+            : const Color(0xFF020817);
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: sheetColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border(top: BorderSide(color: borderColor, width: 1)),
           ),
           padding: const EdgeInsets.all(24),
           child: SingleChildScrollView(
@@ -729,7 +776,7 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
+                    color: borderColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -748,12 +795,12 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Order Details',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF020817),
+                        color: titleColor,
                       ),
                     ),
                   ],
@@ -790,12 +837,25 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
   }
 
   Widget _buildDetailRow(String label, String value, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final panelColor = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF8FAFC);
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final labelColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final valueColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: panelColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: borderColor),
       ),
       child: Row(
         children: [
@@ -814,19 +874,19 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF64748B),
+                    color: labelColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF020817),
+                    color: valueColor,
                   ),
                 ),
               ],
@@ -849,13 +909,45 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
     final createdAt = DateTime.parse(file['created_at']);
     final formattedDate =
         '${createdAt.month}/${createdAt.day}/${createdAt.year}';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final subtleIcon = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final actionCardBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final deleteBg = isDark ? const Color(0xFF3B1A1A) : const Color(0xFFFEE2E2);
+    final messageBorder = isDark
+        ? const Color(0xFF2E4365)
+        : const Color(0xFFDBEAFE);
+    final fileBorder = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final infoBarBg = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF8FAFC);
+    final onlineBorder = isDark ? const Color(0xFF111827) : Colors.white;
+    final roleChipBg = isDark
+        ? const Color(0xFF1E3A8A)
+        : const Color(0xFFDBEAFE);
+    final roleChipText = isDark
+        ? const Color(0xFFBFDBFE)
+        : const Color(0xFF2563EB);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+        border: Border.all(color: borderColor, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -907,7 +999,7 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
                         decoration: BoxDecoration(
                           color: const Color(0xFF22C55E),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2.5),
+                          border: Border.all(color: onlineBorder, width: 2.5),
                         ),
                       ),
                     ),
@@ -920,10 +1012,10 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
                     children: [
                       Text(
                         senderName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                           height: 1.3,
                         ),
                       ),
@@ -936,30 +1028,30 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDBEAFE),
+                              color: roleChipBg,
                               borderRadius: BorderRadius.circular(5),
                             ),
                             child: Text(
                               senderRole,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF2563EB),
+                                color: roleChipText,
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Icon(
+                          Icon(
                             Icons.access_time_rounded,
                             size: 13,
-                            color: Color(0xFF94A3B8),
+                            color: subtleIcon,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             formattedDate,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF64748B),
+                              color: mutedTextColor,
                             ),
                           ),
                         ],
@@ -969,19 +1061,12 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: actionCardBg,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFFE2E8F0),
-                      width: 1,
-                    ),
+                    border: Border.all(color: borderColor, width: 1),
                   ),
                   child: IconButton(
-                    icon: const Icon(
-                      Icons.send_rounded,
-                      size: 20,
-                      color: Color(0xFF0F172A),
-                    ),
+                    icon: Icon(Icons.send_rounded, size: 20, color: titleColor),
                     onPressed: () {
                       TouchBarHelper.showModalBottomSheetWithTouchBar(
                         context: context,
@@ -1005,7 +1090,7 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
                 const SizedBox(width: 8),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEE2E2),
+                    color: deleteBg,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: IconButton(
@@ -1030,12 +1115,12 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF2563EB).withOpacity(0.05),
-                      const Color(0xFF8B5CF6).withOpacity(0.05),
+                      const Color(0xFF2563EB).withOpacity(isDark ? 0.16 : 0.05),
+                      const Color(0xFF8B5CF6).withOpacity(isDark ? 0.16 : 0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFDBEAFE)),
+                  border: Border.all(color: messageBorder),
                 ),
                 child: Row(
                   children: [
@@ -1068,12 +1153,12 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    const Color(0xFF8B5CF6).withOpacity(0.05),
-                    const Color(0xFF6366F1).withOpacity(0.05),
+                    const Color(0xFF8B5CF6).withOpacity(isDark ? 0.16 : 0.05),
+                    const Color(0xFF6366F1).withOpacity(isDark ? 0.16 : 0.05),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                border: Border.all(color: fileBorder, width: 1.5),
               ),
               child: Row(
                 children: [
@@ -1095,10 +1180,10 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
                   Expanded(
                     child: Text(
                       fileName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
-                        color: Color(0xFF020817),
+                        color: titleColor,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1174,9 +1259,9 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: infoBarBg,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: borderColor),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

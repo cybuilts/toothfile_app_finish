@@ -21,6 +21,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
       if (__argc > 1) {
         std::wstring args;
         for (int i = 1; i < __argc; ++i) {
+          if (!args.empty()) {
+            args += L"\n";
+          }
           args += __wargv[i];
         }
 
@@ -48,6 +51,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   // Register the custom URL scheme
   RegisterUrlScheme(L"io.supabase.toothfile");
+  RegisterQuickShareContextMenu();
 
   flutter::DartProject project(L"data");
 

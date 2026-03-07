@@ -1,3 +1,5 @@
+// ignore_for_file: use_super_parameters, library_private_types_in_public_api, unused_field, unnecessary_null_comparison
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -6,7 +8,7 @@ import 'package:toothfile/order_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 
 class CreateOrderDialog extends StatefulWidget {
   final Function(Order) onOrderCreated;
@@ -107,17 +109,18 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
   };
 
   Color _getShadeGroupColor(String group) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     switch (group) {
       case 'A':
-        return const Color(0xFFFEF3C7);
+        return isDark ? const Color(0xFF3B2F1A) : const Color(0xFFFEF3C7);
       case 'B':
-        return const Color(0xFFFED7AA);
+        return isDark ? const Color(0xFF3B2418) : const Color(0xFFFED7AA);
       case 'C':
-        return const Color(0xFFE5E7EB);
+        return isDark ? const Color(0xFF1F2937) : const Color(0xFFE5E7EB);
       case 'D':
-        return const Color(0xFFD1D5DB);
+        return isDark ? const Color(0xFF334155) : const Color(0xFFD1D5DB);
       default:
-        return const Color(0xFFF3F4F6);
+        return isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF3F4F6);
     }
   }
 
@@ -141,10 +144,25 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+        final borderColor = isDark
+            ? const Color(0xFF2B3A55)
+            : const Color(0xFFE2E8F0);
+        final titleColor = isDark
+            ? const Color(0xFFE5E7EB)
+            : const Color(0xFF020817);
+        final subtitleColor = isDark
+            ? const Color(0xFFA8B3C7)
+            : const Color(0xFF64748B);
+        final unselectedChipText = isDark
+            ? const Color(0xFFE5E7EB)
+            : const Color(0xFF020817);
+        return Container(
+        decoration: BoxDecoration(
+          color: sheetColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -156,7 +174,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
               height: 4,
               margin: const EdgeInsets.only(bottom: 24),
               decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
+                color: borderColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -188,7 +206,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -197,7 +215,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -206,7 +224,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                         'Vita Classic Shade Guide',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF64748B),
+                          color: subtitleColor,
                         ),
                       ),
                     ],
@@ -396,7 +414,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                         fontWeight: FontWeight.w700,
                                         color: isSelected
                                             ? Colors.white
-                                            : const Color(0xFF020817),
+                                            : unselectedChipText,
                                         letterSpacing: 0.3,
                                       ),
                                     ),
@@ -415,7 +433,8 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
             const SizedBox(height: 8),
           ],
         ),
-      ),
+      );
+      },
     );
   }
 
@@ -543,18 +562,26 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
         context: context,
         backgroundColor: Colors.transparent,
         builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+          final titleColor = isDark
+              ? const Color(0xFFE5E7EB)
+              : const Color(0xFF020817);
+          final iconColor = isDark
+              ? const Color(0xFFA8B3C7)
+              : const Color(0xFF64748B);
           return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            decoration: BoxDecoration(
+              color: sheetColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.folder_open_rounded),
-                    title: const Text('Choose File'),
+                    leading: Icon(Icons.folder_open_rounded, color: iconColor),
+                    title: Text('Choose File', style: TextStyle(color: titleColor)),
                     onTap: () async {
                       Navigator.pop(context);
                       await _pickFiles();
@@ -779,11 +806,37 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final hintTextColor = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final fieldBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final softPanel = isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF1F5F9);
+    final profileIconBg = isDark
+        ? const Color(0xFF1E3A8A)
+        : const Color(0xFFDBEAFE);
+    final technicianIconBg = isDark
+        ? const Color(0xFF1B3A2A)
+        : const Color(0xFFDCFCE7);
+    final selectedDetailsBg = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final fileListBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final fileItemBg = isDark ? const Color(0xFF111827) : Colors.white;
+    final deleteFileBg = isDark ? const Color(0xFF3B1A1A) : const Color(0xFFFEE2E2);
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: sheetColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       constraints: BoxConstraints(maxHeight: screenHeight * 0.9),
       child: Column(
@@ -795,7 +848,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
             height: 4,
             margin: const EdgeInsets.only(top: 12, bottom: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
+              color: borderColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -829,7 +882,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -838,7 +891,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF020817),
+                          color: titleColor,
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -847,7 +900,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                         'Fill in the details below',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF64748B),
+                          color: mutedTextColor,
                         ),
                       ),
                     ],
@@ -855,13 +908,13 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: softPanel,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
-                      color: Color(0xFF64748B),
+                      color: mutedTextColor,
                       size: 20,
                     ),
                     onPressed: _isSubmitting
@@ -887,24 +940,24 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Customer Name
-                    const Text(
+                    Text(
                       'Customer Name',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF020817),
+                        color: titleColor,
                       ),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
                       decoration: InputDecoration(
                         hintText: 'Enter customer name',
-                        hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                        hintStyle: TextStyle(color: hintTextColor),
                         prefixIcon: Container(
                           margin: const EdgeInsets.all(12),
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFDBEAFE),
+                            color: profileIconBg,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(
@@ -915,15 +968,11 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE2E8F0),
-                          ),
+                          borderSide: BorderSide(color: borderColor),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE2E8F0),
-                          ),
+                          borderSide: BorderSide(color: borderColor),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -933,7 +982,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                           ),
                         ),
                         filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
+                        fillColor: fieldBg,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 16,
@@ -947,12 +996,12 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                     const SizedBox(height: 20),
 
                     // Dental Technician
-                    const Text(
+                    Text(
                       'Dental Technician/Dentist',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF020817),
+                        color: titleColor,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -976,7 +1025,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                           child: Material(
                             elevation: 8,
                             borderRadius: BorderRadius.circular(12),
-                            color: Colors.white,
+                            color: sheetColor,
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
                                 maxHeight: 200,
@@ -1005,7 +1054,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                           Container(
                                             padding: const EdgeInsets.all(6),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFFDCFCE7),
+                                              color: technicianIconBg,
                                               borderRadius:
                                                   BorderRadius.circular(6),
                                             ),
@@ -1018,9 +1067,9 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                           const SizedBox(width: 12),
                                           Text(
                                             option,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 14,
-                                              color: Color(0xFF020817),
+                                              color: titleColor,
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
@@ -1041,14 +1090,12 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                               focusNode: focusNode,
                               decoration: InputDecoration(
                                 hintText: 'Select or enter technician name',
-                                hintStyle: const TextStyle(
-                                  color: Color(0xFF94A3B8),
-                                ),
+                                hintStyle: TextStyle(color: hintTextColor),
                                 prefixIcon: Container(
                                   margin: const EdgeInsets.all(12),
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFDCFCE7),
+                                    color: technicianIconBg,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: const Icon(
@@ -1059,15 +1106,11 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFE2E8F0),
-                                  ),
+                                  borderSide: BorderSide(color: borderColor),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFE2E8F0),
-                                  ),
+                                  borderSide: BorderSide(color: borderColor),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -1077,7 +1120,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                   ),
                                 ),
                                 filled: true,
-                                fillColor: const Color(0xFFF8FAFC),
+                                fillColor: fieldBg,
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 16,
@@ -1094,12 +1137,12 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                     const SizedBox(height: 20),
 
                     // Tooth Color
-                    const Text(
+                    Text(
                       'Tooth Color (Vita Classic Guide)',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF020817),
+                        color: titleColor,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1109,8 +1152,8 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          color: fieldBg,
+                          border: Border.all(color: borderColor),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -1128,7 +1171,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                     : null,
                                 color: _toothColor != null
                                     ? null
-                                    : const Color(0xFFF1F5F9),
+                                    : softPanel,
                                 borderRadius: BorderRadius.circular(8),
                                 boxShadow: _toothColor != null
                                     ? [
@@ -1147,7 +1190,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                 size: 20,
                                 color: _toothColor != null
                                     ? Colors.white
-                                    : const Color(0xFF94A3B8),
+                                          : hintTextColor,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -1163,8 +1206,8 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                           ? FontWeight.w600
                                           : FontWeight.w400,
                                       color: _toothColor != null
-                                          ? const Color(0xFF020817)
-                                          : const Color(0xFF94A3B8),
+                                          ? titleColor
+                                          : hintTextColor,
                                     ),
                                   ),
                                   if (_toothColor != null)
@@ -1199,9 +1242,9 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                 ],
                               ),
                             ),
-                            const Icon(
+                            Icon(
                               Icons.keyboard_arrow_down_rounded,
-                              color: Color(0xFF64748B),
+                              color: mutedTextColor,
                             ),
                           ],
                         ),
@@ -1210,18 +1253,18 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                     const SizedBox(height: 24),
 
                     // Dental Chart
-                    const Text(
+                    Text(
                       'Dental Chart - Select Teeth',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF020817),
+                        color: titleColor,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Tap on teeth to select or deselect',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      style: TextStyle(fontSize: 12, color: mutedTextColor),
                     ),
                     const SizedBox(height: 12),
                     Container(
@@ -1235,7 +1278,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                           ],
                         ),
                         border: Border.all(
-                          color: const Color(0xFFE2E8F0),
+                          color: borderColor,
                           width: 2,
                         ),
                         borderRadius: BorderRadius.circular(16),
@@ -1259,11 +1302,9 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                             Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: selectedDetailsBg,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFE2E8F0),
-                                ),
+                                border: Border.all(color: borderColor),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.03),
@@ -1299,10 +1340,10 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                       const SizedBox(width: 10),
                                       Text(
                                         '${_selectedTeeth.length} ${_selectedTeeth.length == 1 ? 'tooth' : 'teeth'} selected',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF020817),
+                                          color: titleColor,
                                         ),
                                       ),
                                     ],
@@ -1359,18 +1400,18 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                     const SizedBox(height: 24),
 
                     // File Upload
-                    const Text(
+                    Text(
                       'Attachments',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF020817),
+                        color: titleColor,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Upload images, scans, or documents',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      style: TextStyle(fontSize: 12, color: mutedTextColor),
                     ),
                     const SizedBox(height: 12),
                     InkWell(
@@ -1388,7 +1429,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                             ],
                           ),
                           border: Border.all(
-                            color: const Color(0xFFE2E8F0),
+                            color: borderColor,
                             width: 2,
                           ),
                           borderRadius: BorderRadius.circular(16),
@@ -1422,20 +1463,20 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            const Text(
+                            Text(
                               'Click to upload files',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF020817),
+                                color: titleColor,
                               ),
                             ),
                             const SizedBox(height: 6),
-                            const Text(
+                            Text(
                               'PDF, JPEG, PNG up to 10MB each',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF64748B),
+                                color: mutedTextColor,
                               ),
                             ),
                           ],
@@ -1447,9 +1488,9 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: fileListBg,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: borderColor),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1476,10 +1517,10 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                 const SizedBox(width: 10),
                                 Text(
                                   '${_selectedFiles.length} file${_selectedFiles.length > 1 ? 's' : ''} attached',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF020817),
+                                    color: titleColor,
                                   ),
                                 ),
                               ],
@@ -1491,10 +1532,8 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                 margin: const EdgeInsets.only(bottom: 8),
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  border: Border.all(
-                                    color: const Color(0xFFE2E8F0),
-                                  ),
+                                  color: fileItemBg,
+                                  border: Border.all(color: borderColor),
                                   borderRadius: BorderRadius.circular(10),
                                   boxShadow: [
                                     BoxShadow(
@@ -1531,27 +1570,26 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                                         children: [
                                           Text(
                                             file.name,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
-                                              color: Color(0xFF020817),
+                                              color: titleColor,
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                          if (file.size != null)
-                                            Text(
-                                              '${(file.size! / 1024).toStringAsFixed(1)} KB',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Color(0xFF64748B),
-                                              ),
+                                          Text(
+                                            '${(file.size / 1024).toStringAsFixed(1)} KB',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: mutedTextColor,
                                             ),
+                                          ),
                                         ],
                                       ),
                                     ),
                                     Container(
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFFEE2E2),
+                                        color: deleteFileBg,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: IconButton(
@@ -1576,35 +1614,31 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                     const SizedBox(height: 24),
 
                     // Order Details
-                    const Text(
+                    Text(
                       'Order Details',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF020817),
+                        color: titleColor,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Add any special instructions or notes',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      style: TextStyle(fontSize: 12, color: mutedTextColor),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       decoration: InputDecoration(
                         hintText: 'Enter any additional details...',
-                        hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                        hintStyle: TextStyle(color: hintTextColor),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE2E8F0),
-                          ),
+                          borderSide: BorderSide(color: borderColor),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE2E8F0),
-                          ),
+                          borderSide: BorderSide(color: borderColor),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -1614,7 +1648,7 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                           ),
                         ),
                         filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
+                        fillColor: fieldBg,
                         contentPadding: const EdgeInsets.all(16),
                       ),
                       maxLines: 4,
@@ -1630,11 +1664,9 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
           // Bottom Buttons
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
-              ),
+            decoration: BoxDecoration(
+              color: sheetColor,
+              border: Border(top: BorderSide(color: borderColor, width: 1)),
             ),
             child: Row(
               children: [
@@ -1645,17 +1677,17 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
                         : () => Navigator.of(context).pop(),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      side: BorderSide(color: borderColor),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF64748B),
+                        color: mutedTextColor,
                       ),
                     ),
                   ),

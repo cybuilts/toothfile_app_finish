@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,7 +14,7 @@ import 'package:toothfile/requests_tab.dart';
 import 'package:toothfile/directory_tab.dart';
 import 'package:toothfile/order_form_tab.dart';
 import 'package:toothfile/settings_tab.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 
 class DashboardPage extends StatefulWidget {
   final int? initialIndex;
@@ -111,217 +113,259 @@ class _DashboardPageState extends State<DashboardPage> {
     final size = renderBox.size;
 
     _overlayEntry = OverlayEntry(
-      builder: (context) => Stack(
-        children: [
-          // Transparent barrier to detect outside taps
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _removeOverlay();
-                });
-              },
-              child: Container(color: Colors.transparent),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final menuBackground = isDark ? const Color(0xFF0F172A) : Colors.white;
+        final menuBorder = isDark
+            ? const Color.fromARGB(255, 23, 37, 68)
+            : const Color(0xFFE2E8F0);
+        final primaryText = isDark
+            ? const Color(0xFFE2E8F0)
+            : const Color(0xFF020817);
+        final secondaryText = isDark
+            ? const Color(0xFF94A3B8)
+            : const Color(0xFF64748B);
+        final roleChipBg = isDark
+            ? const Color(0xFF1E3A8A)
+            : const Color(0xFFDBEAFE);
+        final roleChipText = isDark
+            ? const Color(0xFFBFDBFE)
+            : const Color(0xFF2563EB);
+        return Stack(
+          children: [
+            // Transparent barrier to detect outside taps
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _removeOverlay();
+                  });
+                },
+                child: Container(color: Colors.transparent),
+              ),
             ),
-          ),
-          // The actual menu
-          Positioned(
-            top: offset.dy + size.height + 8,
-            right: MediaQuery.of(context).size.width - offset.dx - size.width,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: 280,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                      spreadRadius: -4,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: const Color(0xFF2563EB),
-                            radius: 20,
-                            child: Text(
-                              _userInitials,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _userName,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF020817),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _userEmail,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+            // The actual menu
+            Positioned(
+              top: offset.dy + size.height + 8,
+              right: MediaQuery.of(context).size.width - offset.dx - size.width,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 280,
+                  decoration: BoxDecoration(
+                    color: menuBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: menuBorder, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                        spreadRadius: -4,
                       ),
-                    ),
-                    const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: Color(0xFFE2E8F0),
-                    ),
-                    InkWell(
-                      onTap: () {
-                        setState(() {
-                          _removeOverlay();
-                        });
-                        // Instead of showDialog, use:
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (BuildContext context) {
-                            return const InviteCollaboratorDialog();
-                          },
-                        ).then((_) {
-                          _setTouchBar();
-                        });
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16),
                         child: Row(
-                          children: const [
-                            Icon(
-                              Icons.person_add_alt_1_outlined,
-                              size: 18,
-                              color: Color(0xFF64748B),
-                            ),
-                            SizedBox(width: 12),
-                            Text(
-                              'Invite',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF020817),
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: const Color(0xFF2563EB),
+                              radius: 20,
+                              child: Text(
+                                _userInitials,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () async {
-                        setState(() {
-                          _removeOverlay();
-                        });
-                        await SupabaseAuthService.logout();
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.check_rounded,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Expanded(
-                                  child: Text(
-                                    'Logged out successfully',
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _userName,
                                     style: TextStyle(
-                                      fontWeight: FontWeight.w500,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: primaryText,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: const Color(0xFF16A34A),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            margin: const EdgeInsets.all(16),
-                            elevation: 4,
-                          ),
-                        );
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute(
-                            builder: (context) => const MyApp(),
-                          ),
-                          (Route<dynamic> route) => false,
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        child: Row(
-                          children: const [
-                            Icon(
-                              Icons.logout,
-                              size: 18,
-                              color: Color(0xFF64748B),
-                            ),
-                            SizedBox(width: 12),
-                            Text(
-                              'Sign Out',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF020817),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: roleChipBg,
+                                          borderRadius: BorderRadius.circular(
+                                            5,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          _userRole,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: roleChipText,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _userEmail,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: secondaryText,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
+                      Divider(height: 1, thickness: 1, color: menuBorder),
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            _removeOverlay();
+                          });
+                          // Instead of showDialog, use:
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (BuildContext context) {
+                              return const InviteCollaboratorDialog();
+                            },
+                          ).then((_) {
+                            _setTouchBar();
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.person_add_alt_1_outlined,
+                                size: 18,
+                                color: secondaryText,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Invite',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: primaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () async {
+                          setState(() {
+                            _removeOverlay();
+                          });
+                          await SupabaseAuthService.logout();
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.check_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Expanded(
+                                    child: Text(
+                                      'Logged out successfully',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: const Color(0xFF16A34A),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              margin: const EdgeInsets.all(16),
+                              elevation: 4,
+                            ),
+                          );
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (context) => const MyApp(),
+                            ),
+                            (Route<dynamic> route) => false,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.logout,
+                                size: 18,
+                                color: secondaryText,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Sign Out',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: primaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
 
     Overlay.of(context).insert(_overlayEntry!);
@@ -332,8 +376,20 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final scaffoldColor = isDark ? const Color(0xFF0F172A) : Colors.white;
+    final dividerColor = isDark
+        ? const Color(0xFF1E293B)
+        : const Color(0xFFE2E8F0);
+    final primaryText = isDark
+        ? const Color(0xFFE2E8F0)
+        : const Color(0xFF020817);
+    final secondaryText = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: scaffoldColor,
       body: Column(
         children: [
           // Header
@@ -343,7 +399,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ? const SizedBox(height: 20)
               : const SizedBox.shrink(),
           Container(
-            color: Colors.white,
+            color: surfaceColor,
             padding: const EdgeInsets.fromLTRB(24, 12, 24, 12),
             child: Row(
               children: [
@@ -370,13 +426,13 @@ class _DashboardPageState extends State<DashboardPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  children: [
                     Text(
                       'ToothFile',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF020817),
+                        color: primaryText,
                         height: 1.2,
                       ),
                     ),
@@ -385,7 +441,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
-                        color: Color(0xFF64748B),
+                        color: secondaryText,
                         height: 1.2,
                       ),
                     ),
@@ -402,11 +458,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: const Color(0xFFE2E8F0),
-                        width: 1,
-                      ),
+                      color: surfaceColor,
+                      border: Border.all(color: dividerColor, width: 1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -430,7 +483,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               ? Icons.keyboard_arrow_up
                               : Icons.keyboard_arrow_down,
                           size: 18,
-                          color: const Color(0xFF64748B),
+                          color: secondaryText,
                         ),
                       ],
                     ),
@@ -444,7 +497,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
           // Navigation Tabs
           Container(
-            color: Colors.white,
+            color: surfaceColor,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -464,7 +517,7 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 3),
 
           // Divider
-          Container(height: 1, color: const Color(0xFFE2E8F0)),
+          Container(height: 1, color: dividerColor),
 
           // Content Area
           Expanded(child: _pages[_selectedIndex]),
@@ -475,6 +528,19 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildNavTab(int index, IconData icon, String label) {
     final isSelected = _selectedIndex == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedBackground = isDark
+        ? const Color(0xFF1E293B)
+        : const Color(0xFFF1F5F9);
+    final selectedBorder = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFE2E8F0);
+    final unselectedText = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
+    final selectedText = isDark
+        ? const Color(0xFFE2E8F0)
+        : const Color(0xFF020817);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -492,10 +558,10 @@ class _DashboardPageState extends State<DashboardPage> {
           margin: const EdgeInsets.symmetric(horizontal: 4),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFF1F5F9) : Colors.transparent,
+            color: isSelected ? selectedBackground : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected ? const Color(0xFFE2E8F0) : Colors.transparent,
+              color: isSelected ? selectedBorder : Colors.transparent,
               width: 1,
             ),
           ),
@@ -505,9 +571,7 @@ class _DashboardPageState extends State<DashboardPage> {
               Icon(
                 icon,
                 size: 18,
-                color: isSelected
-                    ? const Color(0xFF2563EB)
-                    : const Color(0xFF64748B),
+                color: isSelected ? const Color(0xFF2563EB) : unselectedText,
               ),
               const SizedBox(width: 8),
               Text(
@@ -515,9 +579,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected
-                      ? const Color(0xFF020817)
-                      : const Color(0xFF64748B),
+                  color: isSelected ? selectedText : unselectedText,
                   letterSpacing: 0,
                 ),
               ),

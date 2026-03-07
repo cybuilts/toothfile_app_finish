@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 
 // Simple test to verify TouchBar functionality compiles correctly
 void main() {

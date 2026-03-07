@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 
 /// Simple demonstration that TouchBar functionality works correctly
 /// This can be run independently to test TouchBar behavior
@@ -54,7 +54,9 @@ class TouchBarDemo extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Manual TouchBar'),
-        content: const Text('Using old manual way - TouchBar may not clear properly.'),
+        content: const Text(
+          'Using old manual way - TouchBar may not clear properly.',
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -86,7 +88,9 @@ class TouchBarDemo extends StatelessWidget {
       ],
       builder: (context) => AlertDialog(
         title: const Text('Auto TouchBar'),
-        content: const Text('Using new auto-clear way - TouchBar disappears automatically!'),
+        content: const Text(
+          'Using new auto-clear way - TouchBar disappears automatically!',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, 'closed'),
@@ -95,16 +99,16 @@ class TouchBarDemo extends StatelessWidget {
         ],
       ),
     );
-    
+
     // TouchBar is automatically cleared here!
     print('Dialog closed - TouchBar should be cleared automatically');
   }
 
   void _showClearTouchBar(BuildContext context) {
     TouchBarHelper.clearTouchBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('TouchBar cleared!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('TouchBar cleared!')));
   }
 }
 

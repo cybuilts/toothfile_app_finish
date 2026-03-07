@@ -44,8 +44,7 @@ LINK : fatal error LNK1181: cannot open input file '..extractedfirebase_cpp_sdk_
 - Firebase C++ SDK libraries are missing for Release configuration
 
 ### **Status:**
-✅ **Debug Build**: WORKING (produces `buildwindowsx64
-unnerDebug	oothfile.exe`)
+✅ **Debug Build**: WORKING (produces `buildwindowsx64unnerDebug	oothfile.exe`)
 ❌ **Release Build**: Firebase library linking issue
 
 ### **Solutions Available:**

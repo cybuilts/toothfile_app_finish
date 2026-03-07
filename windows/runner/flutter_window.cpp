@@ -5,6 +5,7 @@
 #include "flutter/generated_plugin_registrant.h"
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
+#include "utils.h"
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -71,14 +72,7 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
       COPYDATASTRUCT* cds = reinterpret_cast<COPYDATASTRUCT*>(lparam);
       if (cds->dwData == 0) { // 0 matches what we sent in main.cpp
         std::wstring wstr(static_cast<wchar_t*>(cds->lpData));
-         
-         // Convert wstring to string manually to avoid MSVC warnings about loss of data
-         // Since URLs are generally ASCII, this simple cast loop is safe for standard URLs
-         std::string str;
-         str.reserve(wstr.length());
-         for (wchar_t c : wstr) {
-             str.push_back(static_cast<char>(c));
-         }
+        std::string str = Utf8FromUtf16(wstr.c_str());
         
         // Send to Dart via MethodChannel
         const flutter::StandardMethodCodec& codec = flutter::StandardMethodCodec::GetInstance();

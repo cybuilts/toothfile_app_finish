@@ -18,5 +18,6 @@ std::vector<std::string> GetCommandLineArguments();
 
 // Registers the custom URL scheme for the application.
 void RegisterUrlScheme(const wchar_t* scheme);
+void RegisterQuickShareContextMenu();
 
 #endif  // RUNNER_UTILS_H_

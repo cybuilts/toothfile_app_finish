@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:toothfile/touch_bar_helper.dart';
+import 'package:toothfile/touchbar/touch_bar_helper.dart';
 import 'package:touch_bar/touch_bar.dart';
 
 class FileTrackerTab extends StatefulWidget {
@@ -208,249 +208,300 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Filter by Status',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF020817),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...['All Status', 'Sent', 'Viewed', 'Downloaded'].map((status) {
-              final isSelected = _selectedFilter == status;
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 6,
-                ),
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedFilter = status;
-                      _updateTouchBar();
-                    });
-                    Navigator.pop(context);
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+        final borderColor = isDark
+            ? const Color(0xFF2B3A55)
+            : const Color(0xFFE2E8F0);
+        final titleColor = isDark
+            ? const Color(0xFFE5E7EB)
+            : const Color(0xFF020817);
+        final unselectedText = isDark
+            ? const Color(0xFFE5E7EB)
+            : const Color(0xFF0F172A);
+        final unselectedIconBg = isDark
+            ? const Color(0xFF1D2A3F)
+            : const Color(0xFFF1F5F9);
+        final unselectedIcon = isDark
+            ? const Color(0xFFA8B3C7)
+            : const Color(0xFF64748B);
+        final selectedBg = isDark
+            ? const Color(0xFF1B3A2A)
+            : const Color(0xFFDCFCE7);
+        final selectedBorder = isDark
+            ? const Color(0xFF2F7C4A)
+            : const Color(0xFF86EFAC);
+        final selectedText = isDark
+            ? const Color(0xFF86EFAC)
+            : const Color(0xFF14532D);
+        return Container(
+          decoration: BoxDecoration(
+            color: sheetColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border(top: BorderSide(color: borderColor, width: 1)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFFDCFCE7)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color(0xFF86EFAC)
-                            : Colors.transparent,
+                      color: borderColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Filter by Status',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: titleColor,
+                        ),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
+                  ),
+                  const SizedBox(height: 16),
+                  ...['All Status', 'Sent', 'Viewed', 'Downloaded'].map((status) {
+                    final isSelected = _selectedFilter == status;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 6,
+                      ),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedFilter = status;
+                            _updateTouchBar();
+                          });
+                          Navigator.pop(context);
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xFF16A34A)
-                                : const Color(0xFFF1F5F9),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            status == 'Downloaded'
-                                ? Icons.download_done_rounded
-                                : status == 'Viewed'
-                                ? Icons.visibility_rounded
-                                : status == 'Sent'
-                                ? Icons.send_rounded
-                                : Icons.filter_list_rounded,
-                            size: 16,
-                            color: isSelected
-                                ? Colors.white
-                                : const Color(0xFF64748B),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            status,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: isSelected
-                                  ? FontWeight.w600
-                                  : FontWeight.w500,
+                            color: isSelected ? selectedBg : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
                               color: isSelected
-                                  ? const Color(0xFF14532D)
-                                  : const Color(0xFF0F172A),
+                                  ? selectedBorder
+                                  : Colors.transparent,
                             ),
                           ),
-                        ),
-                        if (isSelected)
-                          const Icon(
-                            Icons.check_circle_rounded,
-                            color: Color(0xFF16A34A),
-                            size: 20,
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? const Color(0xFF16A34A)
+                                      : unselectedIconBg,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  status == 'Downloaded'
+                                      ? Icons.download_done_rounded
+                                      : status == 'Viewed'
+                                      ? Icons.visibility_rounded
+                                      : status == 'Sent'
+                                      ? Icons.send_rounded
+                                      : Icons.filter_list_rounded,
+                                  size: 16,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : unselectedIcon,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  status,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                    color: isSelected
+                                        ? selectedText
+                                        : unselectedText,
+                                  ),
+                                ),
+                              ),
+                              if (isSelected)
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Color(0xFF16A34A),
+                                  size: 20,
+                                ),
+                            ],
                           ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-            const SizedBox(height: 10),
-          ],
-        ),
-      ),
-    ).then((_) {
-      _updateTouchBar();
-    });
-  }
-
-  Future<void> _deleteFile(String fileId, String fileName) async {
-    final confirm = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        TouchBarHelper.setPopupTouchBar(
-          context: context,
-          actions: [
-            TouchBarHelperAction(
-              label: 'Cancel',
-              action: () => Navigator.pop(context, false),
-            ),
-            TouchBarHelperAction(
-              label: 'Delete',
-              action: () => Navigator.pop(context, true),
-              isDestructive: true,
-            ),
-          ],
-        );
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE2E8F0),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFEE2E2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.delete_rounded,
-                  color: Color(0xFFEF4444),
-                  size: 32,
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Delete File Record?',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF020817),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Are you sure you want to delete the tracking record for "$fileName"?',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: Color(0xFFE2E8F0)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEF4444),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Delete',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 10),
                 ],
               ),
-            ],
+            ),
           ),
         );
       },
     ).then((_) {
       _updateTouchBar();
     });
+  }
+
+  Future<void> _deleteFile(String fileId, String fileName) async {
+    final confirm =
+        await showModalBottomSheet<bool>(
+          context: context,
+          backgroundColor: Colors.transparent,
+          builder: (context) {
+            TouchBarHelper.setPopupTouchBar(
+              context: context,
+              actions: [
+                TouchBarHelperAction(
+                  label: 'Cancel',
+                  action: () => Navigator.pop(context, false),
+                ),
+                TouchBarHelperAction(
+                  label: 'Delete',
+                  action: () => Navigator.pop(context, true),
+                  isDestructive: true,
+                ),
+              ],
+            );
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final sheetColor = isDark ? const Color(0xFF111827) : Colors.white;
+            final borderColor = isDark
+                ? const Color(0xFF2B3A55)
+                : const Color(0xFFE2E8F0);
+            final titleColor = isDark
+                ? const Color(0xFFE5E7EB)
+                : const Color(0xFF020817);
+            final mutedTextColor = isDark
+                ? const Color(0xFFA8B3C7)
+                : const Color(0xFF64748B);
+            final dangerSoft = isDark
+                ? const Color(0xFF3B1A1A)
+                : const Color(0xFFFEE2E2);
+            return Container(
+              decoration: BoxDecoration(
+                color: sheetColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+                border: Border(top: BorderSide(color: borderColor, width: 1)),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: borderColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: dangerSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.delete_rounded,
+                      color: Color(0xFFEF4444),
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Delete File Record?',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: titleColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Are you sure you want to delete the tracking record for "$fileName"?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: mutedTextColor),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(color: borderColor),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: mutedTextColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEF4444),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Delete',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ).then((_) {
+          _updateTouchBar();
+        });
 
     if (confirm == true) {
       try {
@@ -542,9 +593,57 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
     final filteredFiles = _getFilteredFiles();
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageColor = isDark
+        ? const Color(0xFF0B1220)
+        : const Color(0xFFF8FAFC);
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final panelColor = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF8FAFC);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final hintTextColor = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final chipBg = isDark ? const Color(0xFF1B3A2A) : const Color(0xFFDCFCE7);
+    final chipText = isDark ? const Color(0xFF86EFAC) : const Color(0xFF16A34A);
+    final emptyBg = isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF1F5F9);
+    final trackerIconBg = isDark
+        ? const Color(0xFF1B3A2A)
+        : const Color(0xFFDCFCE7);
+    final onlineBorder = isDark ? const Color(0xFF111827) : Colors.white;
+    final deleteBg = isDark ? const Color(0xFF3B1A1A) : const Color(0xFFFEE2E2);
+    final statusTimeBg = isDark
+        ? const Color(0xFF1D2A3F)
+        : const Color(0xFFF1F5F9);
+    final progressTrack = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final downloadedBg = isDark
+        ? const Color(0xFF1B3A2A)
+        : const Color(0xFFDCFCE7);
+    final viewedBg = isDark
+        ? const Color(0xFF3B2F1A)
+        : const Color(0xFFFEF3C7);
+    final sentBg = isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE);
+    final downloadedText = isDark
+        ? const Color(0xFF86EFAC)
+        : const Color(0xFF16A34A);
+    final viewedText = isDark
+        ? const Color(0xFFFCD34D)
+        : const Color(0xFFF59E0B);
+    final sentText = isDark ? const Color(0xFFBFDBFE) : const Color(0xFF2563EB);
 
     return Container(
-      color: const Color(0xFFF8FAFC),
+      color: pageColor,
       child: SafeArea(
         top: false,
         child: Column(
@@ -566,7 +665,7 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
+                          color: trackerIconBg,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(
@@ -582,24 +681,21 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                           style: TextStyle(
                             fontSize: isMobile ? 22 : 24,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF020817),
+                            color: titleColor,
                             letterSpacing: -0.5,
                           ),
                         ),
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: cardColor,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFFE2E8F0),
-                            width: 1,
-                          ),
+                          border: Border.all(color: borderColor, width: 1),
                         ),
                         child: IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.refresh,
-                            color: Color(0xFF64748B),
+                            color: mutedTextColor,
                             size: 20,
                           ),
                           onPressed: _loadSentFiles,
@@ -610,9 +706,9 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Track the status of files you\'ve sent to others',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 14, color: mutedTextColor),
                   ),
                 ],
               ),
@@ -627,12 +723,9 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cardColor,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFFE2E8F0),
-                          width: 1,
-                        ),
+                        border: Border.all(color: borderColor, width: 1),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
@@ -648,12 +741,12 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                             _searchQuery = value;
                           });
                         },
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Search files, recipients...',
-                          hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+                          hintStyle: TextStyle(color: hintTextColor),
                           prefixIcon: Icon(
                             Icons.search,
-                            color: Color(0xFF94A3B8),
+                            color: hintTextColor,
                             size: 20,
                           ),
                           border: InputBorder.none,
@@ -668,12 +761,9 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                   const SizedBox(width: 12),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFFE2E8F0),
-                        width: 1,
-                      ),
+                      border: Border.all(color: borderColor, width: 1),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.03),
@@ -683,9 +773,9 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                       ],
                     ),
                     child: IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.filter_list,
-                        color: Color(0xFF64748B),
+                        color: mutedTextColor,
                         size: 22,
                       ),
                       onPressed: _showFilterOptions,
@@ -714,9 +804,9 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                       _updateTouchBar();
                     });
                   },
-                  backgroundColor: const Color(0xFFDCFCE7),
-                  labelStyle: const TextStyle(
-                    color: Color(0xFF16A34A),
+                  backgroundColor: chipBg,
+                  labelStyle: TextStyle(
+                    color: chipText,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -735,8 +825,8 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
+                            decoration: BoxDecoration(
+                              color: emptyBg,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -746,20 +836,20 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          const Text(
+                          Text(
                             'No files sent yet',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF020817),
+                              color: titleColor,
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             'Files you send will be tracked here',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF64748B),
+                              color: mutedTextColor,
                             ),
                           ),
                         ],
@@ -787,12 +877,9 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: cardColor,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFFE2E8F0),
-                              width: 1,
-                            ),
+                            border: Border.all(color: borderColor, width: 1),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.03),
@@ -843,19 +930,19 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                                         children: [
                                           Text(
                                             file['file_name'],
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 15,
                                               fontWeight: FontWeight.w600,
-                                              color: Color(0xFF020817),
+                                              color: titleColor,
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
                                             _formatFileSize(file['file_size']),
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 13,
-                                              color: Color(0xFF64748B),
+                                              color: mutedTextColor,
                                             ),
                                           ),
                                         ],
@@ -868,10 +955,10 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: status == 'Downloaded'
-                                            ? const Color(0xFFDCFCE7)
+                                            ? downloadedBg
                                             : status == 'Viewed'
-                                            ? const Color(0xFFFEF3C7)
-                                            : const Color(0xFFDBEAFE),
+                                            ? viewedBg
+                                            : sentBg,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
@@ -880,17 +967,17 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                           color: status == 'Downloaded'
-                                              ? const Color(0xFF16A34A)
+                                              ? downloadedText
                                               : status == 'Viewed'
-                                              ? const Color(0xFFF59E0B)
-                                              : const Color(0xFF2563EB),
+                                              ? viewedText
+                                              : sentText,
                                         ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Container(
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFFEE2E2),
+                                        color: deleteBg,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: IconButton(
@@ -951,7 +1038,7 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                                               color: const Color(0xFF22C55E),
                                               shape: BoxShape.circle,
                                               border: Border.all(
-                                                color: Colors.white,
+                                                color: onlineBorder,
                                                 width: 2,
                                               ),
                                             ),
@@ -967,19 +1054,19 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                                         children: [
                                           Text(
                                             receiverName,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w600,
-                                              color: Color(0xFF020817),
+                                              color: titleColor,
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
                                             receiverEmail,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 12,
-                                              color: Color(0xFF64748B),
+                                              color: mutedTextColor,
                                             ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -992,23 +1079,23 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFF1F5F9),
+                                        color: statusTimeBg,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             Icons.access_time_rounded,
                                             size: 12,
-                                            color: Color(0xFF64748B),
+                                            color: mutedTextColor,
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
                                             timeago.format(createdAt),
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 12,
-                                              color: Color(0xFF64748B),
+                                              color: mutedTextColor,
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
@@ -1023,11 +1110,9 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
+                                    color: panelColor,
                                     borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: const Color(0xFFE2E8F0),
-                                    ),
+                                    border: Border.all(color: borderColor),
                                   ),
                                   child: Column(
                                     children: [
@@ -1035,7 +1120,7 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
                                       Container(
                                         height: 6,
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFE2E8F0),
+                                          color: progressTrack,
                                           borderRadius: BorderRadius.circular(
                                             3,
                                           ),
