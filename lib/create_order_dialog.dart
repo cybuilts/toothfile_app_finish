@@ -83,16 +83,24 @@ class _CreateOrderDialogState extends State<CreateOrderDialog> {
         return;
       }
 
-      final response = await supabase
-          .from('profiles')
-          .select('name')
-          .inFilter('id', connectedUserIds)
-          .order('name', ascending: true);
+      final response = await supabase.rpc(
+        'get_public_profiles',
+        params: {'_ids': connectedUserIds},
+      );
+      final profiles = List<Map<String, dynamic>>.from(response)
+        ..sort((a, b) => (a['name'] ?? '')
+            .toString()
+            .toLowerCase()
+            .compareTo((b['name'] ?? '').toString().toLowerCase()));
 
       setState(() {
-        _dentalTechnicians = List<Map<String, dynamic>>.from(
-          response,
-        ).map((e) => e['name'] as String).toList();
+        _dentalTechnicians = profiles.map((e) {
+          final name = e['name']?.toString().trim() ?? '';
+          if (name.isNotEmpty) return name;
+          final id = e['id']?.toString() ?? '';
+          if (id.length >= 4) return 'ID •••• ${id.substring(id.length - 4)}';
+          return 'Unknown';
+        }).toList();
         _isLoadingTechnicians = false;
       });
     } catch (e) {

@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:toothfile/device_service.dart';
 import 'forward_dialog.dart';
 import 'package:toothfile/touchbar/touch_bar_helper.dart';
 import 'package:touch_bar/touch_bar.dart';
@@ -48,6 +49,16 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
     super.dispose();
   }
 
+  bool _isVisibleForCurrentDevice(Map<String, dynamic> file) {
+    final targetId = (file['target_device_id'] ?? '').toString().trim();
+    if (targetId.isEmpty) return true;
+    final currentDeviceId = DeviceService.instance.currentDeviceId;
+    if (currentDeviceId == null || currentDeviceId.isEmpty) {
+      return false;
+    }
+    return targetId == currentDeviceId;
+  }
+
   void _filterFiles() {
     final query = _searchController.text.toLowerCase();
     setState(() {
@@ -80,18 +91,34 @@ class _ReceivedFilesTabState extends State<ReceivedFilesTab> {
           .eq('receiver_id', userId)
           .order('created_at', ascending: false);
 
-      List<Map<String, dynamic>> filesWithSenderInfo = [];
-      for (var file in response) {
-        final senderId = file['sender_id'];
-        if (senderId != null) {
-          final senderProfile = await Supabase.instance.client
-              .from('profiles')
-              .select('name, email, role')
-              .eq('id', senderId)
-              .single();
-          file['profiles'] = senderProfile;
+      final filesWithSenderInfo = <Map<String, dynamic>>[];
+      final senderIds = <String>{};
+      for (final file in response) {
+        if (!_isVisibleForCurrentDevice(file)) continue;
+        final senderId = file['sender_id']?.toString();
+        if (senderId != null && senderId.isNotEmpty) senderIds.add(senderId);
+        filesWithSenderInfo.add(Map<String, dynamic>.from(file));
+      }
+
+      final senderById = <String, Map<String, dynamic>>{};
+      if (senderIds.isNotEmpty) {
+        final senderProfiles = await Supabase.instance.client.rpc(
+          'get_public_profiles',
+          params: {'_ids': senderIds.toList()},
+        );
+        for (final profile in List<Map<String, dynamic>>.from(senderProfiles)) {
+          final id = profile['id']?.toString();
+          if (id != null && id.isNotEmpty) {
+            senderById[id] = profile;
+          }
         }
-        filesWithSenderInfo.add(file);
+      }
+
+      for (final file in filesWithSenderInfo) {
+        final senderId = file['sender_id']?.toString();
+        if (senderId != null && senderById.containsKey(senderId)) {
+          file['profiles'] = senderById[senderId];
+        }
       }
 
       if (!mounted) return;
@@ -904,8 +931,8 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
     final message = file['message'] ?? '';
     final sender = file['profiles'] ?? {};
     final senderName = sender['name'] ?? 'Unknown Sender';
-    final senderEmail = sender['email'] ?? 'N/A';
-    final senderRole = sender['role'] ?? 'User';
+    final senderEmail = _emailOrMaskedId(sender);
+    final senderRole = sender['role'] ?? sender['user_role'] ?? 'User';
     final createdAt = DateTime.parse(file['created_at']);
     final formattedDate =
         '${createdAt.month}/${createdAt.day}/${createdAt.year}';
@@ -1294,5 +1321,13 @@ class _ReceivedFileCardState extends State<ReceivedFileCard> {
         ),
       ),
     );
+  }
+
+  String _emailOrMaskedId(Map<String, dynamic> profile) {
+    final email = profile['email']?.toString().trim();
+    if (email != null && email.isNotEmpty) return email;
+    final id = profile['id']?.toString() ?? '';
+    if (id.length >= 4) return 'ID •••• ${id.substring(id.length - 4)}';
+    return 'ID ••••';
   }
 }

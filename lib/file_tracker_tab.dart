@@ -76,10 +76,10 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
 
       Map<String, Map<String, dynamic>> receiverProfiles = {};
       if (receiverIds.isNotEmpty) {
-        final profiles = await supabase
-            .from('profiles')
-            .select('id, name, email')
-            .inFilter('id', receiverIds);
+        final profiles = await supabase.rpc(
+          'get_public_profiles',
+          params: {'_ids': receiverIds},
+        );
 
         for (var profile in profiles) {
           receiverProfiles[profile['id']] = profile;
@@ -91,11 +91,12 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
         if (receiverId != null && receiverProfiles.containsKey(receiverId)) {
           file['receiver_name'] =
               receiverProfiles[receiverId]?['name'] ?? 'Unknown';
-          file['receiver_email'] =
-              receiverProfiles[receiverId]?['email'] ?? 'N/A';
+          file['receiver_email'] = _emailOrMaskedId(
+            receiverProfiles[receiverId] ?? const {},
+          );
         } else {
           file['receiver_name'] = 'Unknown';
-          file['receiver_email'] = 'N/A';
+          file['receiver_email'] = 'ID ••••';
         }
 
         try {
@@ -156,6 +157,14 @@ class _FileTrackerTabState extends State<FileTrackerTab> {
         _isLoading = false;
       });
     }
+  }
+
+  String _emailOrMaskedId(Map<String, dynamic> profile) {
+    final email = profile['email']?.toString().trim();
+    if (email != null && email.isNotEmpty) return email;
+    final id = profile['id']?.toString() ?? '';
+    if (id.length >= 4) return 'ID •••• ${id.substring(id.length - 4)}';
+    return 'ID ••••';
   }
 
   String _getFileStatus(Map<String, dynamic> file) {

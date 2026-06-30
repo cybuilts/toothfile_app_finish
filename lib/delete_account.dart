@@ -16,12 +16,8 @@ Future<void> deleteAccount() async {
   );
 
   if (res.statusCode == 200) {
-    print("Account deleted ✅");
-
-    // logout
     await Supabase.instance.client.auth.signOut();
-    
   } else {
-    print("Failed: ${res.body}");
+    throw Exception('Failed to delete account: ${res.statusCode}');
   }
 }

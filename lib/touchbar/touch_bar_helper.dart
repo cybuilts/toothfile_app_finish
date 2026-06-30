@@ -40,6 +40,7 @@ class TouchBarHelper {
               TouchBarScrubberLabel('Requests'),
               TouchBarScrubberLabel('Directory'),
               TouchBarScrubberLabel('Order'),
+              TouchBarScrubberLabel('Devices'),
               TouchBarScrubberLabel('Settings'),
             ],
             onSelect: (index) {

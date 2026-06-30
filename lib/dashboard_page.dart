@@ -13,8 +13,10 @@ import 'package:toothfile/file_tracker_tab.dart';
 import 'package:toothfile/requests_tab.dart';
 import 'package:toothfile/directory_tab.dart';
 import 'package:toothfile/order_form_tab.dart';
+import 'package:toothfile/devices_tab.dart';
 import 'package:toothfile/settings_tab.dart';
 import 'package:toothfile/touchbar/touch_bar_helper.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DashboardPage extends StatefulWidget {
   final int? initialIndex;
@@ -41,6 +43,7 @@ class _DashboardPageState extends State<DashboardPage> {
     const RequestsTab(),
     const DirectoryTab(),
     const OrderFormTab(),
+    const DevicesTab(),
     const SettingsTab(),
   ];
 
@@ -103,6 +106,13 @@ class _DashboardPageState extends State<DashboardPage> {
       setState(() {});
     } else {
       _showMenu();
+    }
+  }
+
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -283,6 +293,73 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                         ),
                       ),
+                      InkWell(
+                        onTap: () async {
+                          setState(() {
+                            _removeOverlay();
+                          });
+                          await _openExternalUrl('https://toothfile.com/docs');
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.menu_book_rounded,
+                                size: 18,
+                                color: secondaryText,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Docs',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: primaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () async {
+                          setState(() {
+                            _removeOverlay();
+                          });
+                          await _openExternalUrl(
+                            'https://toothfile.com/download',
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.download_rounded,
+                                size: 18,
+                                color: secondaryText,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Download',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: primaryText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Divider(height: 1, thickness: 1, color: menuBorder),
                       InkWell(
                         onTap: () async {
                           setState(() {
@@ -509,7 +586,8 @@ class _DashboardPageState extends State<DashboardPage> {
                   _buildNavTab(3, Icons.notifications_outlined, 'Requests'),
                   _buildNavTab(4, Icons.people_outline, 'Directory'),
                   _buildNavTab(5, Icons.description_outlined, 'Order Form'),
-                  _buildNavTab(6, Icons.settings_outlined, 'Settings'),
+                  _buildNavTab(6, Icons.devices_rounded, 'Devices'),
+                  _buildNavTab(7, Icons.settings_outlined, 'Settings'),
                 ],
               ),
             ),

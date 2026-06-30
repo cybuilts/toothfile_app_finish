@@ -63,11 +63,22 @@ class _DirectoryTabState extends State<DirectoryTab> {
         return;
       }
 
-      final usersData = await supabase
-          .from('profiles')
-          .select('id, name, email, role, created_at')
-          .neq('id', currentUser.id)
-          .order('created_at', ascending: false);
+      final usersData = await supabase.rpc('list_directory_profiles');
+      final normalizedUsers = List<Map<String, dynamic>>.from(usersData)
+          .where((u) => u['id'] != currentUser.id)
+          .toList()
+        ..sort((a, b) {
+          final aCreated = DateTime.tryParse(
+            (a['created_at'] ?? '').toString(),
+          );
+          final bCreated = DateTime.tryParse(
+            (b['created_at'] ?? '').toString(),
+          );
+          if (aCreated == null && bCreated == null) return 0;
+          if (aCreated == null) return 1;
+          if (bCreated == null) return -1;
+          return bCreated.compareTo(aCreated);
+        });
 
       final sentRequests = await supabase
           .from('connection_requests')
@@ -88,7 +99,7 @@ class _DirectoryTabState extends State<DirectoryTab> {
       }
 
       setState(() {
-        _users = List<Map<String, dynamic>>.from(usersData);
+        _users = normalizedUsers;
         _connectionStatuses = statuses;
         _filteredUsers = _users;
         _isLoading = false;
@@ -142,15 +153,26 @@ class _DirectoryTabState extends State<DirectoryTab> {
     setState(() {
       _filteredUsers = _users.where((user) {
         final name = (user['name'] as String?)?.toLowerCase() ?? '';
-        final email = (user['email'] as String?)?.toLowerCase() ?? '';
+        final emailOrId = _emailOrMaskedId(user).toLowerCase();
+        final userRole =
+            (user['role'] ?? user['user_role'] ?? '').toString();
 
-        final matchesSearch = name.contains(query) || email.contains(query);
+        final matchesSearch =
+            name.contains(query) || emailOrId.contains(query);
         final matchesRole =
-            _selectedRole == 'All Roles' || user['role'] == _selectedRole;
+            _selectedRole == 'All Roles' || userRole == _selectedRole;
 
         return matchesSearch && matchesRole;
       }).toList();
     });
+  }
+
+  String _emailOrMaskedId(Map<String, dynamic> profile) {
+    final email = profile['email']?.toString().trim();
+    if (email != null && email.isNotEmpty) return email;
+    final id = profile['id']?.toString() ?? '';
+    if (id.length >= 4) return 'ID •••• ${id.substring(id.length - 4)}';
+    return 'ID ••••';
   }
 
   Future<void> _sendConnectionRequest(
@@ -869,8 +891,9 @@ class _DirectoryTabState extends State<DirectoryTab> {
                       itemBuilder: (context, index) {
                         final user = _filteredUsers[index];
                         final name = user['name'] ?? 'Unknown';
-                        final email = user['email'] ?? 'N/A';
-                        final role = user['role'] ?? 'User';
+                        final email = _emailOrMaskedId(user);
+                        final role =
+                            user['role'] ?? user['user_role'] ?? 'User';
                         final createdAt = DateTime.parse(user['created_at']);
                         final initial = name.isNotEmpty
                             ? name[0].toUpperCase()

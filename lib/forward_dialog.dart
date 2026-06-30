@@ -84,10 +84,10 @@ class _ForwardDialogState extends State<ForwardDialog> {
       }
       List<Map<String, dynamic>> profiles = [];
       if (ids.isNotEmpty) {
-        final res = await client
-            .from('profiles')
-            .select('id,name,email,role')
-            .inFilter('id', ids.toList());
+        final res = await client.rpc(
+          'get_public_profiles',
+          params: {'_ids': ids.toList()},
+        );
         profiles = List<Map<String, dynamic>>.from(res as List);
       }
       setState(() {
@@ -152,11 +152,7 @@ class _ForwardDialogState extends State<ForwardDialog> {
         String? type = f['file_type'] as String?;
         Map<String, dynamic>? me;
         try {
-          final res = await client
-              .from('profiles')
-              .select('name,email')
-              .eq('id', current.id)
-              .single();
+          final res = await client.rpc('get_my_profile');
           me = Map<String, dynamic>.from(res as Map);
         } catch (_) {}
         final fromName = (me?['name']?.toString().trim().isNotEmpty == true)
@@ -544,8 +540,8 @@ class _ForwardDialogState extends State<ForwardDialog> {
                       final id = p['id'] as String;
                       final selected = _selectedUserId == id;
                       final name = p['name'] ?? 'Unknown';
-                      final email = p['email'] ?? 'N/A';
-                      final role = p['role'] ?? 'User';
+                      final email = _emailOrMaskedId(p);
+                      final role = p['role'] ?? p['user_role'] ?? 'User';
                       final initial = name.isNotEmpty
                           ? name[0].toUpperCase()
                           : 'U';
@@ -836,5 +832,13 @@ class _ForwardDialogState extends State<ForwardDialog> {
         ],
       ),
     );
+  }
+
+  String _emailOrMaskedId(Map<String, dynamic> profile) {
+    final email = profile['email']?.toString().trim();
+    if (email != null && email.isNotEmpty) return email;
+    final id = profile['id']?.toString() ?? '';
+    if (id.length >= 4) return 'ID •••• ${id.substring(id.length - 4)}';
+    return 'ID ••••';
   }
 }

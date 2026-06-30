@@ -9,14 +9,21 @@ import 'package:uuid/uuid.dart';
 import 'package:archive/archive.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:toothfile/touchbar/touch_bar_helper.dart';
+import 'package:toothfile/device_service.dart';
 
 class SendFilesDialog extends StatefulWidget {
   final Map<String, dynamic> userData;
   final List<String> initialFilePaths;
+  final String? receiverIdOverride;
+  final String? sourceDeviceId;
+  final String? targetDeviceId;
   const SendFilesDialog({
     super.key,
     required this.userData,
     this.initialFilePaths = const [],
+    this.receiverIdOverride,
+    this.sourceDeviceId,
+    this.targetDeviceId,
   });
 
   @override
@@ -595,7 +602,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
 
     final zipEncoder = ZipEncoder();
     final zipData = zipEncoder.encode(archive);
-    return Uint8List.fromList(zipData!);
+    return Uint8List.fromList(zipData);
   }
 
   Future<void> _uploadFilesAndCreateOrder() async {
@@ -686,14 +693,11 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
         return;
       }
 
-      final recipientEmail = widget.userData['email'];
-      final List<Map<String, dynamic>> receiver = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', recipientEmail)
-          .limit(1);
-
-      if (receiver.isEmpty) {
+      String? receiverId = widget.receiverIdOverride;
+      if (receiverId == null || receiverId.isEmpty) {
+        receiverId = widget.userData['id']?.toString();
+      }
+      if (receiverId == null || receiverId.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -733,19 +737,28 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
         });
         return;
       }
-      final receiverId = receiver.first['id'];
 
       final customerName = _customerNameController.text;
       final selectedToothColor = _selectedToothColor;
       final selectedTeeth = _selectedTeeth;
-      final message = _messageController.text;
+      final userMessage = _messageController.text.trim();
+      final finalMessage = userMessage;
+      final resolvedSourceDeviceId =
+          (widget.sourceDeviceId?.trim().isNotEmpty ?? false)
+          ? widget.sourceDeviceId!.trim()
+          : DeviceService.instance.currentDeviceId;
+      final rawTargetDeviceId = widget.targetDeviceId?.trim();
+      final resolvedTargetDeviceId =
+          (rawTargetDeviceId == null || rawTargetDeviceId.isEmpty)
+          ? null
+          : rawTargetDeviceId;
 
       final String orderId = const Uuid().v4();
 
       if (_compressAsZip) {
         final zipBytes = await _createZipFile(_pickedFiles);
         final fileName = '${DateTime.now().millisecondsSinceEpoch}_files.zip';
-        final filePath = 'dental-files/${user.id}/$fileName';
+        final filePath = '${user.id}/$fileName';
 
         await supabase.storage
             .from('dental-files')
@@ -763,7 +776,9 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
           'file_size': zipBytes.length,
           'file_type': 'zip',
           'file_path': filePath,
-          'message': message.isNotEmpty ? message : null,
+          'source_device_id': resolvedSourceDeviceId,
+          'target_device_id': resolvedTargetDeviceId,
+          'message': finalMessage.isNotEmpty ? finalMessage : null,
           'customer_name': customerName.isNotEmpty ? customerName : null,
           'selected_teeth': selectedTeeth.isNotEmpty ? selectedTeeth : null,
           'tooth_color': selectedToothColor,
@@ -773,7 +788,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
         for (final file in _pickedFiles) {
           final fileName =
               '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-          final filePath = 'dental-files/${user.id}/$fileName';
+          final filePath = '${user.id}/$fileName';
 
           Uint8List? fileBytes;
           if (file.bytes != null) {
@@ -803,7 +818,9 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
             'file_size': file.size,
             'file_type': file.extension ?? 'unknown',
             'file_path': filePath,
-            'message': message.isNotEmpty ? message : null,
+            'source_device_id': resolvedSourceDeviceId,
+            'target_device_id': resolvedTargetDeviceId,
+            'message': finalMessage.isNotEmpty ? finalMessage : null,
             'customer_name': customerName.isNotEmpty ? customerName : null,
             'selected_teeth': selectedTeeth.isNotEmpty ? selectedTeeth : null,
             'tooth_color': selectedToothColor,
@@ -1147,7 +1164,7 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
                                   const SizedBox(width: 6),
                                   Flexible(
                                     child: Text(
-                                      widget.userData['email'] ?? 'N/A',
+                                      _emailOrMaskedId(widget.userData),
                                       style: TextStyle(
                                         fontSize: 11,
                                         color: mutedTextColor,
@@ -1938,5 +1955,13 @@ class _SendFilesDialogState extends State<SendFilesDialog> {
         ],
       ),
     );
+  }
+
+  String _emailOrMaskedId(Map<String, dynamic> profile) {
+    final email = profile['email']?.toString().trim();
+    if (email != null && email.isNotEmpty) return email;
+    final id = profile['id']?.toString() ?? '';
+    if (id.length >= 4) return 'ID •••• ${id.substring(id.length - 4)}';
+    return 'ID ••••';
   }
 }

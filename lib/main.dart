@@ -1,6 +1,7 @@
 // ignore_for_file: unused_element, unused_local_variable
 
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:toothfile/dashboard_page.dart';
 import 'package:toothfile/quick_share_service.dart';
+import 'package:toothfile/device_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toothfile/supabase_auth_service.dart';
 // import 'package:firebase_core/firebase_core.dart';  // Temporarily disabled for Windows Release build
@@ -164,16 +166,36 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  StreamSubscription<AuthState>? _authSubscription;
+
   @override
   void initState() {
     super.initState();
     _loadTheme();
+    _authSubscription = SupabaseAuthService.authStateChanges.listen((auth) async {
+      if (auth.event == AuthChangeEvent.signedIn ||
+          auth.event == AuthChangeEvent.tokenRefreshed) {
+        await DeviceService.instance.initializeForSignedInUser();
+      } else if (auth.event == AuthChangeEvent.signedOut) {
+        await DeviceService.instance.markSignedOut();
+      }
+    });
+
+    if (Supabase.instance.client.auth.currentUser != null) {
+      DeviceService.instance.initializeForSignedInUser();
+    }
   }
 
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
     final theme = prefs.getString('selected_theme') ?? 'system';
     appThemeModeNotifier.value = themeModeFromPreference(theme);
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -237,6 +259,7 @@ class _AuthPageState extends State<AuthPage> {
 
   String? _selectedRole;
   TapGestureRecognizer? _termsRecognizer;
+  TapGestureRecognizer? _privacyRecognizer;
 
   @override
   void initState() {
@@ -244,6 +267,13 @@ class _AuthPageState extends State<AuthPage> {
     _termsRecognizer = TapGestureRecognizer()
       ..onTap = () async {
         final uri = Uri.parse('https://toothfile.com/terms-of-use');
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      };
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () async {
+        final uri = Uri.parse('https://toothfile.com/privacy-policy');
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         }
@@ -552,6 +582,7 @@ class _AuthPageState extends State<AuthPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _termsRecognizer?.dispose();
+    _privacyRecognizer?.dispose();
     super.dispose();
   }
 
@@ -1099,6 +1130,24 @@ class _AuthPageState extends State<AuthPage> {
                         decoration: TextDecoration.underline,
                       ),
                       recognizer: _termsRecognizer,
+                    ),
+                    const TextSpan(
+                      text: ' and ',
+                      style: TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: const TextStyle(
+                        color: Color(0xFF2563EB),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        decoration: TextDecoration.underline,
+                      ),
+                      recognizer: _privacyRecognizer,
                     ),
                   ],
                 ),

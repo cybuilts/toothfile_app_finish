@@ -64,14 +64,5 @@
   <string>Allow access to your photo library to upload images.</string>
   <key>NSCameraUsageDescription</key>
   <string>Allow using the camera to take and upload photos.</string>
-  <key>NSAppTransportSecurity</key>
-  <dict>
-    <key>NSAllowsArbitraryLoads</key>
-    <true/>
-    <key>NSAllowsArbitraryLoadsForMedia</key>
-    <true/>
-    <key>NSAllowsArbitraryLoadsInWebContent</key>
-    <true/>
-  </dict>
 </dict>
 </plist>

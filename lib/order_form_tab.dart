@@ -908,15 +908,15 @@ class _OrderFormTabState extends State<OrderFormTab> {
 
       final namesById = <String, String>{};
       if (forwardedIds.isNotEmpty) {
-        final profs = await supabase
-            .from('profiles')
-            .select('id,name,email')
-            .inFilter('id', forwardedIds.toList());
+        final profs = await supabase.rpc(
+          'get_public_profiles',
+          params: {'_ids': forwardedIds.toList()},
+        );
         for (final p in (profs as List)) {
           final pid = p['id']?.toString();
           final name = (p['name']?.toString().trim().isNotEmpty == true)
               ? p['name'].toString()
-              : (p['email']?.toString() ?? 'User');
+              : _emailOrMaskedId(Map<String, dynamic>.from(p));
           if (pid != null) namesById[pid] = name;
         }
       }
@@ -926,7 +926,26 @@ class _OrderFormTabState extends State<OrderFormTab> {
         List<String> parsedFiles = [];
 
         if (files is List) {
-          parsedFiles = files.map((f) => f.toString()).toList();
+          for (final fileEntry in files) {
+            if (fileEntry == null) continue;
+            if (fileEntry is String) {
+              final value = fileEntry.trim();
+              if (value.isNotEmpty) parsedFiles.add(value);
+              continue;
+            }
+            if (fileEntry is Map) {
+              final dynamic pathLike =
+                  fileEntry['path'] ??
+                  fileEntry['file_path'] ??
+                  fileEntry['url'] ??
+                  fileEntry['name'];
+              final value = pathLike?.toString().trim() ?? '';
+              if (value.isNotEmpty) parsedFiles.add(value);
+              continue;
+            }
+            final fallback = fileEntry.toString().trim();
+            if (fallback.isNotEmpty) parsedFiles.add(fallback);
+          }
         } else if (files is String) {
           parsedFiles = [files];
         }
@@ -959,6 +978,14 @@ class _OrderFormTabState extends State<OrderFormTab> {
         _isLoading = false;
       });
     }
+  }
+
+  String _emailOrMaskedId(Map<String, dynamic> profile) {
+    final email = profile['email']?.toString().trim();
+    if (email != null && email.isNotEmpty) return email;
+    final id = profile['id']?.toString() ?? '';
+    if (id.length >= 4) return 'ID •••• ${id.substring(id.length - 4)}';
+    return 'ID ••••';
   }
 
   Future<void> _deleteOrder(String orderId, String customerName) async {
@@ -1842,7 +1869,7 @@ class OrderCard extends StatelessWidget {
   }
 
   Widget _buildFileChip(BuildContext context, String fileUrl) {
-    final fileName = Uri.parse(fileUrl).pathSegments.last;
+    final fileName = _extractFileName(fileUrl);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final chipBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final chipBorder = isDark
@@ -1918,6 +1945,22 @@ class OrderCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _extractFileName(String fileUrl) {
+    final value = fileUrl.trim();
+    if (value.isEmpty) return 'file';
+
+    final uri = Uri.tryParse(value);
+    if (uri != null && uri.pathSegments.isNotEmpty) {
+      return Uri.decodeComponent(uri.pathSegments.last);
+    }
+
+    final segments = value.split(RegExp(r'[\\/]'));
+    if (segments.isNotEmpty) {
+      return segments.last;
+    }
+    return value;
   }
 
   @override

@@ -82,14 +82,18 @@ class _SendFilesTabState extends State<SendFilesTab> {
         return;
       }
 
-      final response = await Supabase.instance.client
-          .from('profiles')
-          .select('id, name, email, role')
-          .inFilter('id', connectedUserIds)
-          .order('name', ascending: true);
+      final response = await Supabase.instance.client.rpc(
+        'get_public_profiles',
+        params: {'_ids': connectedUserIds},
+      );
+      final users = List<Map<String, dynamic>>.from(response)
+        ..sort((a, b) => (a['name'] ?? '')
+            .toString()
+            .toLowerCase()
+            .compareTo((b['name'] ?? '').toString().toLowerCase()));
 
       setState(() {
-        _users = List<Map<String, dynamic>>.from(response);
+        _users = users;
         _isLoading = false;
       });
       _filterUsers();
@@ -107,8 +111,9 @@ class _SendFilesTabState extends State<SendFilesTab> {
     setState(() {
       _filteredUsers = _users.where((user) {
         final name = user['name']?.toLowerCase() ?? '';
-        final email = user['email']?.toLowerCase() ?? '';
-        final role = user['role']?.toLowerCase() ?? '';
+        final email = _emailOrMaskedId(user).toLowerCase();
+        final role =
+            (user['role'] ?? user['user_role'] ?? '').toString().toLowerCase();
         final selectedRoleLc = _selectedRole.toLowerCase();
 
         final matchesSearch = name.contains(query) || email.contains(query);
@@ -118,6 +123,14 @@ class _SendFilesTabState extends State<SendFilesTab> {
         return matchesSearch && matchesRole;
       }).toList();
     });
+  }
+
+  String _emailOrMaskedId(Map<String, dynamic> profile) {
+    final email = profile['email']?.toString().trim();
+    if (email != null && email.isNotEmpty) return email;
+    final id = profile['id']?.toString() ?? '';
+    if (id.length >= 4) return 'ID •••• ${id.substring(id.length - 4)}';
+    return 'ID ••••';
   }
 
   void _showRoleFilter() {
@@ -610,8 +623,8 @@ class _SendFilesTabState extends State<SendFilesTab> {
 
   Widget _buildUserCard(Map<String, dynamic> user, bool isMobile) {
     final userName = user['name'] ?? 'Unknown User';
-    final userEmail = user['email'] ?? 'N/A';
-    final userRole = user['role'] ?? 'User';
+    final userEmail = _emailOrMaskedId(user);
+    final userRole = user['role'] ?? user['user_role'] ?? 'User';
     final userInitials = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardColor = isDark ? const Color(0xFF111827) : Colors.white;

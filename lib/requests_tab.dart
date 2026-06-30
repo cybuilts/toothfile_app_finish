@@ -52,18 +52,35 @@ class _RequestsTabState extends State<RequestsTab> {
           .neq('status', 'accepted')
           .order('created_at', ascending: false);
 
-      List<Map<String, dynamic>> requestsWithSenderDetails = [];
-      for (var request in requestsData) {
-        final senderId = request['sender_id'];
-        if (senderId != null) {
-          final senderDetails = await supabase
-              .from('profiles')
-              .select('name, email, role')
-              .eq('id', senderId)
-              .single();
-          request['sender'] = senderDetails;
+      final senderIds = requestsData
+          .map((request) => request['sender_id']?.toString())
+          .where((id) => id != null && id.isNotEmpty)
+          .cast<String>()
+          .toSet()
+          .toList();
+
+      final sendersById = <String, Map<String, dynamic>>{};
+      if (senderIds.isNotEmpty) {
+        final senderProfiles = await supabase.rpc(
+          'get_public_profiles',
+          params: {'_ids': senderIds},
+        );
+        for (final profile in List<Map<String, dynamic>>.from(senderProfiles)) {
+          final id = profile['id']?.toString();
+          if (id != null && id.isNotEmpty) {
+            sendersById[id] = profile;
+          }
         }
-        requestsWithSenderDetails.add(request);
+      }
+
+      final requestsWithSenderDetails = <Map<String, dynamic>>[];
+      for (final request in requestsData) {
+        final mapped = Map<String, dynamic>.from(request);
+        final senderId = mapped['sender_id']?.toString();
+        if (senderId != null && sendersById.containsKey(senderId)) {
+          mapped['sender'] = sendersById[senderId];
+        }
+        requestsWithSenderDetails.add(mapped);
       }
 
       setState(() {
@@ -532,8 +549,9 @@ class _RequestsTabState extends State<RequestsTab> {
                         final request = _connectionRequests[index];
                         final sender = request['sender'];
                         final senderName = sender?['name'] ?? 'Unknown';
-                        final senderEmail = sender?['email'] ?? 'N/A';
-                        final senderRole = sender?['role'] ?? 'User';
+                        final senderEmail = _emailOrMaskedId(sender);
+                        final senderRole =
+                            sender?['role'] ?? sender?['user_role'] ?? 'User';
                         final message = request['message'] ?? '';
                         final createdAt = DateTime.parse(request['created_at']);
                         final initials = senderName.isNotEmpty
@@ -849,5 +867,13 @@ class _RequestsTabState extends State<RequestsTab> {
         ),
       ),
     );
+  }
+
+  String _emailOrMaskedId(Map<String, dynamic>? profile) {
+    final email = profile?['email']?.toString().trim();
+    if (email != null && email.isNotEmpty) return email;
+    final id = profile?['id']?.toString() ?? '';
+    if (id.length >= 4) return 'ID •••• ${id.substring(id.length - 4)}';
+    return 'ID ••••';
   }
 }

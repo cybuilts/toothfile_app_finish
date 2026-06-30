@@ -12,6 +12,7 @@ import 'package:toothfile/touchbar/touch_bar_helper.dart';
 import 'package:touch_bar/touch_bar.dart';
 import 'package:toothfile/main.dart';
 import 'package:toothfile/supabase_auth_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsTab extends StatefulWidget {
   const SettingsTab({super.key});
@@ -257,6 +258,13 @@ class _SettingsTabState extends State<SettingsTab> {
         ),
       ],
     );
+  }
+
+  Future<void> _openExternalUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _logout() async {
@@ -731,14 +739,28 @@ class _SettingsTabState extends State<SettingsTab> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pageColor = isDark ? const Color(0xFF0B1220) : const Color(0xFFF8FAFC);
+    final pageColor = isDark
+        ? const Color(0xFF0B1220)
+        : const Color(0xFFF8FAFC);
     final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
-    final panelColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
-    final borderColor = isDark ? const Color(0xFF2B3A55) : const Color(0xFFE2E8F0);
-    final titleColor = isDark ? const Color(0xFFE5E7EB) : const Color(0xFF020817);
-    final mutedTextColor = isDark ? const Color(0xFFA8B3C7) : const Color(0xFF64748B);
-    final hintTextColor = isDark ? const Color(0xFF8FA2BF) : const Color(0xFF94A3B8);
-    final dangerSoftColor = isDark ? const Color(0xFF3B1A1A) : const Color(0xFFFEE2E2);
+    final panelColor = isDark
+        ? const Color(0xFF0F172A)
+        : const Color(0xFFF8FAFC);
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final titleColor = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final mutedTextColor = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    final hintTextColor = isDark
+        ? const Color(0xFF8FA2BF)
+        : const Color(0xFF94A3B8);
+    final dangerSoftColor = isDark
+        ? const Color(0xFF3B1A1A)
+        : const Color(0xFFFEE2E2);
     final dangerFillA = isDark
         ? const Color(0xFFEF4444).withOpacity(0.12)
         : const Color(0xFFEF4444).withOpacity(0.05);
@@ -988,7 +1010,9 @@ class _SettingsTabState extends State<SettingsTab> {
                           margin: const EdgeInsets.all(12),
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1D2A3F) : const Color(0xFFF1F5F9),
+                            color: isDark
+                                ? const Color(0xFF1D2A3F)
+                                : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -1343,6 +1367,124 @@ class _SettingsTabState extends State<SettingsTab> {
 
               const SizedBox(height: 20),
 
+              Container(
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: borderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF1E3A8A)
+                                : const Color(0xFFDBEAFE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.verified_user_rounded,
+                            color: Color(0xFF2563EB),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Privacy & Compliance',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: titleColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Review legal pages and how app permissions are used',
+                      style: TextStyle(fontSize: 13, color: mutedTextColor),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildLegalActionRow(
+                      icon: Icons.privacy_tip_rounded,
+                      title: 'Privacy Policy',
+                      subtitle: 'How your data is handled',
+                      onTap: () => _openExternalUrl(
+                        'https://toothfile.com/privacy-policy',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildLegalActionRow(
+                      icon: Icons.description_rounded,
+                      title: 'Terms of Use',
+                      subtitle: 'Terms for using ToothFile',
+                      onTap: () => _openExternalUrl(
+                        'https://toothfile.com/terms-of-use',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildLegalActionRow(
+                      icon: Icons.support_agent_rounded,
+                      title: 'Support Contact',
+                      subtitle: 'toothfileoriginal@gmail.com',
+                      onTap: () => _openExternalUrl(
+                        'mailto:toothfileoriginal@gmail.com',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: panelColor,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildPermissionInfoRow(
+                            icon: Icons.camera_alt_rounded,
+                            title: 'Camera',
+                            subtitle: 'Capture order photos and scans',
+                          ),
+                          Divider(height: 20, color: borderColor),
+                          _buildPermissionInfoRow(
+                            icon: Icons.photo_library_rounded,
+                            title: 'Photos',
+                            subtitle: 'Attach files from your device',
+                          ),
+                          Divider(height: 20, color: borderColor),
+                          _buildPermissionInfoRow(
+                            icon: Icons.nfc_rounded,
+                            title: 'NFC',
+                            subtitle: 'Write and verify order tags',
+                          ),
+                          Divider(height: 20, color: borderColor),
+                          _buildPermissionInfoRow(
+                            icon: Icons.notifications_rounded,
+                            title: 'Notifications',
+                            subtitle: 'Receive status and transfer updates',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
               // Danger Zone Section
               Container(
                 decoration: BoxDecoration(
@@ -1580,6 +1722,120 @@ class _SettingsTabState extends State<SettingsTab> {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLegalActionRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final rowBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final borderColor = isDark
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFE2E8F0);
+    final primaryText = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final secondaryText = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: rowBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1E3A8A)
+                    : const Color(0xFFDBEAFE),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 18, color: const Color(0xFF2563EB)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: secondaryText),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.open_in_new_rounded, size: 18, color: secondaryText),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPermissionInfoRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryText = isDark
+        ? const Color(0xFFE5E7EB)
+        : const Color(0xFF020817);
+    final secondaryText = isDark
+        ? const Color(0xFFA8B3C7)
+        : const Color(0xFF64748B);
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1D2A3F) : const Color(0xFFE2E8F0),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 18, color: secondaryText),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: primaryText,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: secondaryText),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
