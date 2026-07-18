@@ -639,42 +639,28 @@ class _DevicesTabState extends State<DevicesTab> {
 
               // ── Send to all button (shown when >1 device) ─────────────
               if (!_loading && _devices.length > 1) ...[
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2563EB), Color(0xFF8B5CF6)],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF2563EB).withOpacity(0.35),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
+                ElevatedButton.icon(
+                  onPressed: () => _sendToSelf(),
+                  icon: const Icon(
+                    Icons.send_rounded,
+                    size: 18,
+                    color: Colors.white,
                   ),
-                  child: ElevatedButton.icon(
-                    onPressed: () => _sendToSelf(),
-                    icon: const Icon(
-                      Icons.send_rounded,
-                      size: 18,
+                  label: const Text(
+                    'Send File To All Devices',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
                       color: Colors.white,
                     ),
-                    label: const Text(
-                      'Send File To All Devices',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      minimumSize: const Size.fromHeight(52),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1D4ED8),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    minimumSize: const Size.fromHeight(52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
@@ -1023,41 +1009,27 @@ class _DeviceCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 // Send
                 Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2563EB).withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                  child: ElevatedButton.icon(
+                    onPressed: onSend,
+                    icon: const Icon(
+                      Icons.send_rounded,
+                      size: 16,
+                      color: Colors.white,
                     ),
-                    child: ElevatedButton.icon(
-                      onPressed: onSend,
-                      icon: const Icon(
-                        Icons.send_rounded,
-                        size: 16,
+                    label: const Text(
+                      'Send File',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
-                      label: const Text(
-                        'Send File',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1D4ED8),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),

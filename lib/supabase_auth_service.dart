@@ -1,7 +1,10 @@
 // ignore_for_file: unused_import
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart' deferred as google_signin;
+import 'package:http/http.dart' as http;
 
 class SupabaseAuthService {
   static final _supabase = Supabase.instance.client;
@@ -11,20 +14,220 @@ class SupabaseAuthService {
     required String password,
     Map<String, dynamic>? userMetadata,
   }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    final fullName = userMetadata?['name']?.toString().trim() ?? '';
+    final selectedRole = userMetadata?['role']?.toString().trim() ?? '';
+    final signupRole = _normalizeSignupRole(selectedRole);
+
     try {
-      final response = await _supabase.auth.signUp(
-        email: email,
-        password: password,
-        data: userMetadata,
+      // #region debug-point A:signup-invoke
+      http.post(
+        Uri.parse('http://127.0.0.1:8787/event'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'sessionId': 'signup-email-failure',
+          'runId': 'pre-fix',
+          'hypothesisId': 'A',
+          'location': 'supabase_auth_service.dart:signUp:beforeInvoke',
+          'msg': '[DEBUG] Invoking signup-with-verification',
+          'data': {
+            'hasFullName': fullName.isNotEmpty,
+            'selectedRole': selectedRole,
+            'signupRole': signupRole,
+            'passwordLength': password.length,
+            'emailLength': normalizedEmail.length,
+          },
+          'ts': DateTime.now().millisecondsSinceEpoch,
+        }),
+      ).catchError((_) {});
+      // #endregion
+      final response = await _supabase.functions.invoke(
+        'signup-with-verification',
+        body: {
+          'email': normalizedEmail,
+          'password': password,
+          'fullName': fullName,
+          'full_name': fullName,
+          'name': fullName,
+          'role': signupRole,
+          'userRole': signupRole,
+          'accountType': signupRole,
+          'user_role': signupRole,
+          'user_type': signupRole,
+          'userType': signupRole,
+          'profession': signupRole,
+          'roleLabel': signupRole,
+          'selectedRole': signupRole,
+          'role_key': selectedRole,
+          'roleKey': selectedRole,
+        },
+      );
+
+      if (response.status < 200 || response.status >= 300) {
+        // #region debug-point B:signup-non2xx
+        http.post(
+          Uri.parse('http://127.0.0.1:8787/event'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'sessionId': 'signup-email-failure',
+            'runId': 'pre-fix',
+            'hypothesisId': 'B',
+            'location': 'supabase_auth_service.dart:signUp:non2xx',
+            'msg': '[DEBUG] Signup function returned non-2xx status',
+            'data': {
+              'status': response.status,
+              'dataType': response.data.runtimeType.toString(),
+              'mapKeys': response.data is Map
+                  ? (response.data as Map).keys.map((key) => key.toString()).toList()
+                  : null,
+              'rawData': response.data?.toString(),
+            },
+            'ts': DateTime.now().millisecondsSinceEpoch,
+          }),
+        ).catchError((_) {});
+        // #endregion
+        return {
+          'success': false,
+          'message': _mapEmailErrorMessage(
+            _extractFunctionErrorMessage(
+              data: response.data,
+              status: response.status,
+            ),
+          ),
+        };
+      }
+
+      final functionErrorMessage = _extractFunctionErrorMessage(
+        data: response.data,
+        status: response.status,
+      );
+      if (functionErrorMessage != null) {
+        // #region debug-point C:signup-structured-error
+        http.post(
+          Uri.parse('http://127.0.0.1:8787/event'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'sessionId': 'signup-email-failure',
+            'runId': 'pre-fix',
+            'hypothesisId': 'B',
+            'location': 'supabase_auth_service.dart:signUp:structuredError',
+            'msg': '[DEBUG] Signup function returned structured error payload',
+            'data': {
+              'status': response.status,
+              'dataType': response.data.runtimeType.toString(),
+              'mapKeys': response.data is Map
+                  ? (response.data as Map).keys.map((key) => key.toString()).toList()
+                  : null,
+              'functionErrorMessage': functionErrorMessage,
+            },
+            'ts': DateTime.now().millisecondsSinceEpoch,
+          }),
+        ).catchError((_) {});
+        // #endregion
+        return {
+          'success': false,
+          'message': _mapEmailErrorMessage(functionErrorMessage),
+        };
+      }
+
+      // #region debug-point D:signup-success
+      http.post(
+        Uri.parse('http://127.0.0.1:8787/event'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'sessionId': 'signup-email-failure',
+          'runId': 'pre-fix',
+          'hypothesisId': 'D',
+          'location': 'supabase_auth_service.dart:signUp:success',
+          'msg': '[DEBUG] Signup function returned success',
+          'data': {
+            'status': response.status,
+            'dataType': response.data.runtimeType.toString(),
+            'mapKeys': response.data is Map
+                ? (response.data as Map).keys.map((key) => key.toString()).toList()
+                : null,
+          },
+          'ts': DateTime.now().millisecondsSinceEpoch,
+        }),
+      ).catchError((_) {});
+      // #endregion
+
+      return {
+        'success': true,
+        'message': 'Verification code sent',
+        'requiresVerification': true,
+      };
+    } on FunctionException catch (e) {
+      final extractedMessage = _extractFunctionExceptionMessage(e);
+      final mappedMessage = _mapEmailErrorMessage(extractedMessage);
+      // #region debug-point E:signup-exception
+      http.post(
+        Uri.parse('http://127.0.0.1:8787/event'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'sessionId': 'signup-email-failure',
+          'runId': 'pre-fix',
+          'hypothesisId': 'C',
+          'location': 'supabase_auth_service.dart:signUp:exception',
+          'msg': '[DEBUG] Signup function threw exception',
+          'data': {
+            'errorType': e.runtimeType.toString(),
+            'error': e.toString(),
+            'extractedMessage': extractedMessage,
+            'mappedMessage': mappedMessage,
+          },
+          'ts': DateTime.now().millisecondsSinceEpoch,
+        }),
+      ).catchError((_) {});
+      // #endregion
+      return {
+        'success': false,
+        'message': mappedMessage,
+      };
+    } catch (e) {
+      // #region debug-point E:signup-exception
+      http.post(
+        Uri.parse('http://127.0.0.1:8787/event'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'sessionId': 'signup-email-failure',
+          'runId': 'pre-fix',
+          'hypothesisId': 'C',
+          'location': 'supabase_auth_service.dart:signUp:exception',
+          'msg': '[DEBUG] Signup function threw exception',
+          'data': {
+            'errorType': e.runtimeType.toString(),
+            'error': e.toString(),
+          },
+          'ts': DateTime.now().millisecondsSinceEpoch,
+        }),
+      ).catchError((_) {});
+      // #endregion
+      return {'success': false, 'message': _mapEmailErrorMessage(e)};
+    }
+  }
+
+  static Future<Map<String, dynamic>> verifyEmailCode({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      final response = await _supabase.auth.verifyOTP(
+        email: email.trim().toLowerCase(),
+        token: code.trim(),
+        type: OtpType.email,
       );
 
       return {
         'success': true,
-        'message': 'User created successfully',
+        'message': 'Email verified successfully',
+        'session': response.session,
         'user': response.user,
       };
+    } on AuthException catch (e) {
+      return {'success': false, 'message': _mapEmailErrorMessage(e)};
     } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      return {'success': false, 'message': _mapEmailErrorMessage(e)};
     }
   }
 
@@ -49,6 +252,47 @@ class SupabaseAuthService {
       };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> resetPassword({
+    required String email,
+  }) async {
+    try {
+      final redirectTo =
+          !kIsWeb &&
+              (defaultTargetPlatform == TargetPlatform.android ||
+                  defaultTargetPlatform == TargetPlatform.iOS)
+          ? 'io.toothfile.app://reset-password'
+          : 'https://toothfile.com/set-password';
+      await _supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        redirectTo: redirectTo,
+      );
+      return {
+        'success': true,
+        'message': 'Password reset email sent',
+      };
+    } on AuthException catch (e) {
+      return {'success': false, 'message': _mapEmailErrorMessage(e)};
+    } catch (e) {
+      return {'success': false, 'message': _mapEmailErrorMessage(e)};
+    }
+  }
+
+  static Future<Map<String, dynamic>> sendMagicLink({
+    required String email,
+  }) async {
+    try {
+      await _supabase.auth.signInWithOtp(email: email.trim().toLowerCase());
+      return {
+        'success': true,
+        'message': 'Magic link sent',
+      };
+    } on AuthException catch (e) {
+      return {'success': false, 'message': _mapEmailErrorMessage(e)};
+    } catch (e) {
+      return {'success': false, 'message': _mapEmailErrorMessage(e)};
     }
   }
 
@@ -124,4 +368,128 @@ class SupabaseAuthService {
 
   static Stream<AuthState> get authStateChanges =>
       _supabase.auth.onAuthStateChange;
+
+  static String _mapEmailErrorMessage(Object? error) {
+    final message = (error ?? '').toString().toLowerCase();
+
+    if (message.contains('invalid email') || message.contains('statuscode: 400')) {
+      return 'Please enter a valid email address.';
+    }
+    if (message.contains('full name')) {
+      return 'Please enter your full name.';
+    }
+    if (message.contains('dentist or dental technician')) {
+      return 'Please choose Dentist or Dental Technician.';
+    }
+    if (message.contains('already registered') ||
+        message.contains('user already registered') ||
+        message.contains('statuscode: 409')) {
+      return 'This email is already registered. Try signing in.';
+    }
+    if (message.contains('rate limit') || message.contains('statuscode: 429')) {
+      return 'Too many requests. Please try again in a minute.';
+    }
+    if (message.contains('network') ||
+        message.contains('socketexception') ||
+        message.contains('failed host lookup') ||
+        message.contains('statuscode: 500')) {
+      return 'Couldn\'t send email. Please try again shortly.';
+    }
+    if (message.contains('invalid token') ||
+        message.contains('otp') ||
+        message.contains('token')) {
+      return 'That code is invalid or expired. Please try again.';
+    }
+    final rawMessage = error?.toString().trim() ?? '';
+    if (rawMessage.isNotEmpty &&
+        !rawMessage.toLowerCase().startsWith('functionexception(') &&
+        rawMessage.length <= 180) {
+      return rawMessage;
+    }
+    return 'Couldn\'t send email. Please try again shortly.';
+  }
+
+  static String? _extractFunctionErrorMessage({
+    required dynamic data,
+    required int status,
+  }) {
+    String? pickMessage(Map<dynamic, dynamic> map) {
+      for (final key in const [
+        'error',
+        'message',
+        'msg',
+        'details',
+        'error_description',
+      ]) {
+        final value = map[key];
+        if (value is String && value.trim().isNotEmpty) {
+          return value.trim();
+        }
+      }
+      return null;
+    }
+
+    if (data is Map) {
+      final explicitError = pickMessage(data);
+      final success = data['success'];
+      if (success == false) {
+        return explicitError ?? 'statuscode: $status';
+      }
+      if (status >= 400) {
+        return explicitError ?? 'statuscode: $status';
+      }
+      return null;
+    }
+
+    if (data is String && data.trim().isNotEmpty) {
+      if (status >= 400) {
+        return data.trim();
+      }
+      final normalized = data.trim().toLowerCase();
+      if (normalized.contains('"success":false') || normalized.contains('"error"')) {
+        return data.trim();
+      }
+    }
+
+    if (status >= 400) {
+      return 'statuscode: $status';
+    }
+
+    return null;
+  }
+
+  static String _extractFunctionExceptionMessage(FunctionException error) {
+    final details = error.details;
+    if (details is Map) {
+      for (final key in const [
+        'error',
+        'message',
+        'msg',
+        'details',
+        'error_description',
+      ]) {
+        final value = details[key];
+        if (value is String && value.trim().isNotEmpty) {
+          return value.trim();
+        }
+      }
+    }
+    if (details is String && details.trim().isNotEmpty) {
+      return details.trim();
+    }
+    return error.toString();
+  }
+
+  static String _normalizeSignupRole(String role) {
+    switch (role.toLowerCase()) {
+      case 'dental':
+      case 'dentist':
+        return 'Dentist';
+      case 'technician':
+      case 'dental technician':
+        return 'Dental Technician';
+      default:
+        return role;
+    }
+  }
 }

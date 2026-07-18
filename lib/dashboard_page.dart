@@ -16,6 +16,8 @@ import 'package:toothfile/order_form_tab.dart';
 import 'package:toothfile/devices_tab.dart';
 import 'package:toothfile/settings_tab.dart';
 import 'package:toothfile/touchbar/touch_bar_helper.dart';
+import 'package:toothfile/update_install_types.dart';
+import 'package:toothfile/update_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -35,6 +37,7 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _isMenuOpen = false;
   final GlobalKey _menuButtonKey = GlobalKey();
   OverlayEntry? _overlayEntry;
+  bool _hasCheckedForUpdates = false;
 
   List<Widget> get _pages => [
     const ReceivedFilesTab(),
@@ -74,6 +77,7 @@ class _DashboardPageState extends State<DashboardPage> {
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) _setTouchBar();
       });
+      _checkForUpdatesOnLaunch();
     });
   }
 
@@ -114,6 +118,173 @@ class _DashboardPageState extends State<DashboardPage> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  Future<void> _checkForUpdatesOnLaunch() async {
+    if (_hasCheckedForUpdates) {
+      return;
+    }
+    _hasCheckedForUpdates = true;
+
+    final result = await UpdateService.checkForUpdates();
+    final update = result.availableUpdate;
+    if (!mounted || update == null) {
+      return;
+    }
+
+    final shouldPrompt = await UpdateService.shouldPromptForUpdate(update);
+    if (!mounted || !shouldPrompt) {
+      return;
+    }
+    await UpdateService.markPrompted(update);
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !update.mandatory,
+      builder: (context) => AlertDialog(
+        title: Text(update.mandatory ? 'Update Required' : 'Update Available'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${update.displayLabel} is available for ${result.installedVersion.platform}.',
+            ),
+            const SizedBox(height: 12),
+            if (update.sourceName != null)
+              Text(
+                'Source: ${update.sourceName}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            if (update.sourceName != null) const SizedBox(height: 12),
+            if (update.releaseNotes.isNotEmpty) ...[
+              const Text(
+                'What\'s new',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              ...update.releaseNotes.map(
+                (note) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text('- $note'),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          if (!update.mandatory)
+            TextButton(
+              onPressed: () async {
+                await UpdateService.ignoreUpdate(update);
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Later'),
+            ),
+          ElevatedButton(
+            onPressed: () async {
+              await UpdateService.clearIgnoredUpdate();
+              if (context.mounted && !update.mandatory) {
+                Navigator.of(context).pop();
+              }
+              if (UpdateService.supportsInAppInstall) {
+                await _installUpdateFromPrompt(update);
+                return;
+              }
+              await UpdateService.openUpdate(update);
+            },
+            child: Text(
+              UpdateService.supportsAutomaticBackgroundInstall
+                  ? 'Download & Install'
+                  : UpdateService.supportsInAppInstall
+                  ? 'Download Update'
+                  : (kIsWeb ? 'Reload' : 'Open Download'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _installUpdateFromPrompt(RemoteUpdateInfo update) async {
+    final progressNotifier = ValueNotifier<UpdateInstallProgress>(
+      const UpdateInstallProgress(
+        stage: UpdateInstallStage.downloading,
+        message: 'Preparing update...',
+        progress: 0,
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ValueListenableBuilder<UpdateInstallProgress>(
+        valueListenable: progressNotifier,
+        builder: (context, progress, child) => AlertDialog(
+          title: Text(
+            UpdateService.supportsAutomaticBackgroundInstall
+                ? 'Installing Update'
+                : 'Downloading Update',
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(progress.message),
+              const SizedBox(height: 16),
+              LinearProgressIndicator(
+                value: progress.progress != null &&
+                        progress.progress! >= 0 &&
+                        progress.progress! <= 1
+                    ? progress.progress
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final result = await UpdateService.downloadAndInstallUpdate(
+      update,
+      onProgress: (progress) {
+        progressNotifier.value = progress;
+      },
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (result.appWillExit) {
+      progressNotifier.value = UpdateInstallProgress(
+        stage: UpdateInstallStage.completed,
+        message: result.message,
+        progress: 1,
+      );
+      await Future.delayed(const Duration(milliseconds: 700));
+      await UpdateService.exitForInstall();
+      return;
+    }
+
+    if (Navigator.of(context, rootNavigator: true).canPop()) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message),
+        backgroundColor: result.success
+            ? const Color(0xFF16A34A)
+            : const Color(0xFFEF4444),
+      ),
+    );
   }
 
   void _showMenu() {
@@ -403,9 +574,12 @@ class _DashboardPageState extends State<DashboardPage> {
                               elevation: 4,
                             ),
                           );
-                          Navigator.of(context).pushAndRemoveUntil(
+                          Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).pushAndRemoveUntil(
                             MaterialPageRoute(
-                              builder: (context) => const MyApp(),
+                              builder: (context) => const AuthPage(),
                             ),
                             (Route<dynamic> route) => false,
                           );
@@ -608,17 +782,17 @@ class _DashboardPageState extends State<DashboardPage> {
     final isSelected = _selectedIndex == index;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedBackground = isDark
-        ? const Color(0xFF1E293B)
-        : const Color(0xFFF1F5F9);
+        ? const Color(0xFF162033)
+        : const Color(0xFFF8FAFC);
     final selectedBorder = isDark
-        ? const Color(0xFF334155)
-        : const Color(0xFFE2E8F0);
+        ? const Color(0xFF2B3A55)
+        : const Color(0xFFDCE3EC);
     final unselectedText = isDark
         ? const Color(0xFF94A3B8)
         : const Color(0xFF64748B);
     final selectedText = isDark
         ? const Color(0xFFE2E8F0)
-        : const Color(0xFF020817);
+        : const Color(0xFF0F172A);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -634,7 +808,7 @@ class _DashboardPageState extends State<DashboardPage> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
           decoration: BoxDecoration(
             color: isSelected ? selectedBackground : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
@@ -649,7 +823,7 @@ class _DashboardPageState extends State<DashboardPage> {
               Icon(
                 icon,
                 size: 18,
-                color: isSelected ? const Color(0xFF2563EB) : unselectedText,
+                color: isSelected ? selectedText : unselectedText,
               ),
               const SizedBox(width: 8),
               Text(

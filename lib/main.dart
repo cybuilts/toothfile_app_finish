@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
@@ -30,6 +31,20 @@ final ValueNotifier<ThemeMode> appThemeModeNotifier = ValueNotifier(
 
 // MethodChannel for Windows Deep Linking
 const _methodChannel = MethodChannel('com.example.toothfile/deeplink');
+const _primaryWebHost = 'toothfile.com';
+const _supabaseProjectHost = 'ikqsbkfnjamvkevsxqpr.supabase.co';
+
+final ValueNotifier<_PendingInviteContext?> _pendingInviteNotifier =
+    ValueNotifier(null);
+final ValueNotifier<bool> _emailVerifiedNotifier = ValueNotifier(false);
+final ValueNotifier<bool> _passwordRecoveryNotifier = ValueNotifier(false);
+final ValueNotifier<bool> _forceAuthScreenNotifier = ValueNotifier(false);
+
+class _PendingInviteContext {
+  const _PendingInviteContext({required this.invitedBy});
+
+  final String invitedBy;
+}
 
 ThemeMode themeModeFromPreference(String theme) {
   switch (theme) {
@@ -89,6 +104,12 @@ Future<void> _handleWindowsLaunchPayload(String payload) async {
     await Supabase.instance.client.auth.getSessionFromUrl(uri);
     return;
   }
+  if (uri != null) {
+    final handled = await _handleIncomingAuthUri(uri);
+    if (handled) {
+      return;
+    }
+  }
   final args = payload.contains('\n')
       ? payload.split('\n').where((value) => value.trim().isNotEmpty).toList()
       : [payload];
@@ -98,6 +119,111 @@ Future<void> _handleWindowsLaunchPayload(String payload) async {
   }
   QuickShareService.addPendingFiles(quickSharePaths);
   _openSendTabIfSignedIn();
+}
+
+bool _isTrustedDeepLinkHost(Uri uri) {
+  final host = uri.host.toLowerCase();
+  return host == _primaryWebHost || host == _supabaseProjectHost;
+}
+
+Future<void> _routeToDashboardIfSignedIn() async {
+  if (_passwordRecoveryNotifier.value) {
+    return;
+  }
+  _forceAuthScreenNotifier.value = false;
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user == null) {
+    return;
+  }
+  final navigator = _navigatorKey.currentState;
+  if (navigator == null) {
+    return;
+  }
+  navigator.pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const DashboardPage()),
+    (route) => false,
+  );
+}
+
+Future<void> _routeToAuth() async {
+  _forceAuthScreenNotifier.value = true;
+  _passwordRecoveryNotifier.value = false;
+  _emailVerifiedNotifier.value = false;
+  _pendingInviteNotifier.value = null;
+  final navigator = _navigatorKey.currentState;
+  if (navigator == null) {
+    return;
+  }
+  navigator.pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const AuthPage()),
+    (route) => false,
+  );
+}
+
+Map<String, String> _extractDeepLinkParameters(Uri uri) {
+  final parameters = <String, String>{...uri.queryParameters};
+  final fragment = uri.fragment.trim();
+  if (fragment.isNotEmpty && fragment.contains('=')) {
+    try {
+      parameters.addAll(Uri.splitQueryString(fragment));
+    } catch (_) {}
+  }
+  return parameters;
+}
+
+bool _isPasswordRecoveryUri(Uri uri) {
+  if (uri.scheme == 'io.toothfile.app' && uri.host == 'reset-password') {
+    return true;
+  }
+  final type = _extractDeepLinkParameters(uri)['type']?.toLowerCase();
+  return type == 'recovery';
+}
+
+Future<void> _routeToSetPassword() async {
+  _passwordRecoveryNotifier.value = true;
+  final navigator = _navigatorKey.currentState;
+  if (navigator == null) {
+    return;
+  }
+  navigator.pushNamedAndRemoveUntil('/set-password', (route) => false);
+}
+
+Future<bool> _handleIncomingAuthUri(Uri uri) async {
+  if (uri.scheme == 'io.toothfile.app' && uri.host == 'reset-password') {
+    await Supabase.instance.client.auth.getSessionFromUrl(uri);
+    await _routeToSetPassword();
+    return true;
+  }
+
+  if (!_isTrustedDeepLinkHost(uri)) {
+    return false;
+  }
+
+  if (uri.path == '/auth/callback' || uri.path == '/set-password') {
+    await Supabase.instance.client.auth.getSessionFromUrl(uri);
+    if (_isPasswordRecoveryUri(uri) || uri.path == '/set-password') {
+      await _routeToSetPassword();
+    } else {
+      await _routeToDashboardIfSignedIn();
+    }
+    return true;
+  }
+
+  if (uri.path == '/auth') {
+    final invitedBy = uri.queryParameters['invited_by']?.trim();
+    if (invitedBy != null && invitedBy.isNotEmpty) {
+      _pendingInviteNotifier.value = _PendingInviteContext(invitedBy: invitedBy);
+      return true;
+    }
+  }
+
+  if (uri.path == '/email-verified') {
+    _emailVerifiedNotifier.value = true;
+    await _routeToDashboardIfSignedIn();
+    return true;
+  }
+
+  return false;
 }
 
 Future<void> main(List<String> args) async {
@@ -110,8 +236,8 @@ Future<void> main(List<String> args) async {
         final String payload = call.arguments as String;
         try {
           await _handleWindowsLaunchPayload(payload);
-        } catch (e) {
-          debugPrint('Error handling deep link: $e');
+        } catch (_) {
+          debugPrint('Deep link handling failed.');
         }
       }
     });
@@ -143,6 +269,9 @@ Future<void> main(List<String> args) async {
       url: 'https://ikqsbkfnjamvkevsxqpr.supabase.co',
       anonKey:
           'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrcXNia2ZuamFtdmtldnN4cXByIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzNTUxMDMsImV4cCI6MjA2NTkzMTEwM30.fhRMXkOu8WAD6B_zMCe1xBI6E_Ql4pRzRnfJHZS7qPM',
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
     );
     _supabaseReady = true;
   } catch (e) {
@@ -167,17 +296,26 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   StreamSubscription<AuthState>? _authSubscription;
+  StreamSubscription<Uri>? _appLinksSubscription;
+  AppLinks? _appLinks;
 
   @override
   void initState() {
     super.initState();
     _loadTheme();
+    _initDeepLinks();
     _authSubscription = SupabaseAuthService.authStateChanges.listen((auth) async {
-      if (auth.event == AuthChangeEvent.signedIn ||
+      if (auth.event == AuthChangeEvent.passwordRecovery) {
+        _forceAuthScreenNotifier.value = false;
+        await _routeToSetPassword();
+      } else if (auth.event == AuthChangeEvent.signedIn ||
           auth.event == AuthChangeEvent.tokenRefreshed) {
+        _forceAuthScreenNotifier.value = false;
         await DeviceService.instance.initializeForSignedInUser();
       } else if (auth.event == AuthChangeEvent.signedOut) {
+        _passwordRecoveryNotifier.value = false;
         await DeviceService.instance.markSignedOut();
+        await _routeToAuth();
       }
     });
 
@@ -192,9 +330,30 @@ class _MyAppState extends State<MyApp> {
     appThemeModeNotifier.value = themeModeFromPreference(theme);
   }
 
+  Future<void> _initDeepLinks() async {
+    if (kIsWeb) {
+      final uri = Uri.base;
+      await _handleIncomingAuthUri(uri);
+      return;
+    }
+
+    _appLinks = AppLinks();
+    try {
+      final initialUri = await _appLinks!.getInitialLink();
+      if (initialUri != null) {
+        await _handleIncomingAuthUri(initialUri);
+      }
+    } catch (_) {}
+
+    _appLinksSubscription = _appLinks!.uriLinkStream.listen((uri) async {
+      await _handleIncomingAuthUri(uri);
+    });
+  }
+
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _appLinksSubscription?.cancel();
     super.dispose();
   }
 
@@ -218,19 +377,57 @@ class _MyAppState extends State<MyApp> {
           ),
           themeMode: themeMode,
           navigatorKey: _navigatorKey,
-          home: StreamBuilder<AuthState>(
-            stream: SupabaseAuthService.authStateChanges,
-            builder: (context, snapshot) {
-              if (!_supabaseReady) return const AuthPage();
-              final user = Supabase.instance.client.auth.currentUser;
-
-              if (user != null) {
-                return DashboardPage(
-                  initialIndex: QuickShareService.hasPendingFiles ? 1 : null,
+          routes: {
+            '/dashboard': (_) => const DashboardPage(),
+            '/set-password': (_) => const SetPasswordScreen(),
+          },
+          home: ValueListenableBuilder<bool>(
+            valueListenable: _emailVerifiedNotifier,
+            builder: (context, emailVerified, child) {
+              if (emailVerified) {
+                return EmailVerifiedSuccessPage(
+                  onContinue: () {
+                    _emailVerifiedNotifier.value = false;
+                    _routeToDashboardIfSignedIn();
+                  },
                 );
-              } else {
-                return const AuthPage();
               }
+
+              return ValueListenableBuilder<bool>(
+                valueListenable: _passwordRecoveryNotifier,
+                builder: (context, passwordRecovery, child) {
+                  if (passwordRecovery) {
+                    return const SetPasswordScreen();
+                  }
+
+                  return ValueListenableBuilder<bool>(
+                    valueListenable: _forceAuthScreenNotifier,
+                    builder: (context, forceAuthScreen, child) {
+                      if (forceAuthScreen) {
+                        return const AuthPage();
+                      }
+
+                      return StreamBuilder<AuthState>(
+                        stream: SupabaseAuthService.authStateChanges,
+                        builder: (context, snapshot) {
+                          if (!_supabaseReady) return const AuthPage();
+                          final user = Supabase.instance.client.auth.currentUser;
+
+                          if (user != null) {
+                            return DashboardPage(
+                              initialIndex: QuickShareService.hasPendingFiles
+                                  ? 1
+                                  : null,
+                            );
+                          } else {
+                            return const AuthPage();
+                          }
+                        },
+                      );
+                    },
+                  );
+                },
+              );
             },
           ),
         );
@@ -252,12 +449,22 @@ class _AuthPageState extends State<AuthPage> {
   bool _isLoading = false;
   bool _signInPasswordVisible = false;
   bool _signUpPasswordVisible = false;
+  bool _showVerificationStep = false;
+  int _resendCooldownSeconds = 0;
+
+  Timer? _resendCooldownTimer;
 
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _verificationCodeController =
+      TextEditingController();
 
   String? _selectedRole;
+  String? _verificationEmail;
+  String? _verificationPassword;
+  String? _verificationFullName;
+  String? _verificationRole;
   TapGestureRecognizer? _termsRecognizer;
   TapGestureRecognizer? _privacyRecognizer;
 
@@ -278,6 +485,8 @@ class _AuthPageState extends State<AuthPage> {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
         }
       };
+    _pendingInviteNotifier.addListener(_handleInviteContextChanged);
+    _handleInviteContextChanged();
 
     // Initialize TouchBar after frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -290,15 +499,6 @@ class _AuthPageState extends State<AuthPage> {
       context: context,
       actions: [
         TouchBarHelperAction(
-          label: _isSignInSelected ? 'Sign Up Mode' : 'Sign In Mode',
-          action: () {
-            setState(() {
-              _isSignInSelected = !_isSignInSelected;
-            });
-            _updateTouchBar();
-          },
-        ),
-        TouchBarHelperAction(
           label: 'Google Auth',
           action: () async {
             // Trigger Google Auth
@@ -310,14 +510,18 @@ class _AuthPageState extends State<AuthPage> {
           },
         ),
         TouchBarHelperAction(
-          label: _isSignInSelected ? 'Sign In' : 'Create Account',
+          label: _showVerificationStep
+              ? 'Verify Email'
+              : _pendingInviteNotifier.value != null
+              ? 'Create Account'
+              : 'Sign In',
           action: () {
-            // Trigger Form Submit
-            // This requires extracting the submit logic to a method
-            if (_isSignInSelected) {
-              _handleSignIn();
-            } else {
+            if (_showVerificationStep) {
+              _handleVerifyCode();
+            } else if (_pendingInviteNotifier.value != null) {
               _handleSignUp();
+            } else {
+              _handleSignIn();
             }
           },
           isPrimary: true,
@@ -326,44 +530,113 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
+  void _handleInviteContextChanged() {
+    if (!mounted) {
+      return;
+    }
+    final invite = _pendingInviteNotifier.value;
+    if (invite != null && _isSignInSelected) {
+      setState(() {
+        _isSignInSelected = false;
+      });
+    }
+  }
+
+  void _showMessage(String message, {required Color color, IconData? icon}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon ?? Icons.info_outline_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        elevation: 4,
+      ),
+    );
+  }
+
+  void _startResendCooldown([int seconds = 60]) {
+    _resendCooldownTimer?.cancel();
+    setState(() {
+      _resendCooldownSeconds = seconds;
+    });
+    _resendCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || _resendCooldownSeconds <= 1) {
+        timer.cancel();
+        if (mounted) {
+          setState(() {
+            _resendCooldownSeconds = 0;
+          });
+        }
+        return;
+      }
+      setState(() {
+        _resendCooldownSeconds -= 1;
+      });
+    });
+  }
+
+  void _enterVerificationStep({
+    required String email,
+    required String password,
+    required String fullName,
+    required String role,
+  }) {
+    setState(() {
+      _showVerificationStep = true;
+      _verificationEmail = email.trim().toLowerCase();
+      _verificationPassword = password;
+      _verificationFullName = fullName.trim();
+      _verificationRole = role;
+      _verificationCodeController.clear();
+    });
+    _startResendCooldown();
+  }
+
+  void _exitVerificationStep() {
+    _resendCooldownTimer?.cancel();
+    setState(() {
+      _showVerificationStep = false;
+      _resendCooldownSeconds = 0;
+      _verificationCodeController.clear();
+      _verificationEmail = null;
+      _verificationPassword = null;
+      _verificationFullName = null;
+      _verificationRole = null;
+    });
+  }
+
   Future<void> _handleSignIn() async {
-    final String email = _emailController.text.trim();
+    final String email = _emailController.text.trim().toLowerCase();
     final String password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Please enter both email and password',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFFF97316),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(16),
-          elevation: 4,
-        ),
+      _showMessage(
+        'Please enter both email and password',
+        color: const Color(0xFFF97316),
+        icon: Icons.warning_amber_rounded,
       );
       return;
     }
@@ -390,85 +663,94 @@ class _AuthPageState extends State<AuthPage> {
         (Route<dynamic> route) => false,
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.error_outline_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  response['message'],
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(16),
-          elevation: 4,
-        ),
+      _showMessage(
+        response['message'],
+        color: const Color(0xFFEF4444),
+        icon: Icons.error_outline_rounded,
       );
     }
   }
 
-  Future<void> _handleSignUp() async {
-    final String fullName = _fullNameController.text.trim();
-    final String email = _emailController.text.trim();
-    final String password = _passwordController.text.trim();
+  Future<void> _handleResetPassword() async {
+    final email = _emailController.text.trim().toLowerCase();
+    if (email.isEmpty) {
+      _showMessage(
+        'Enter your email first to reset your password.',
+        color: const Color(0xFFF97316),
+        icon: Icons.warning_amber_rounded,
+      );
+      return;
+    }
 
-    if (fullName.isEmpty ||
-        email.isEmpty ||
-        password.isEmpty ||
-        _selectedRole == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Please fill in all fields and select a role',
-                  style: TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFFF97316),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(16),
-          elevation: 4,
-        ),
+    setState(() {
+      _isLoading = true;
+    });
+    final response = await SupabaseAuthService.resetPassword(email: email);
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+    });
+    _showMessage(
+      response['message'],
+      color: response['success']
+          ? const Color(0xFF16A34A)
+          : const Color(0xFFEF4444),
+      icon: response['success']
+          ? Icons.mark_email_read_rounded
+          : Icons.error_outline_rounded,
+    );
+  }
+
+  Future<void> _handleMagicLinkSignIn() async {
+    final email = _emailController.text.trim().toLowerCase();
+    if (email.isEmpty) {
+      _showMessage(
+        'Enter your email first to receive a magic link.',
+        color: const Color(0xFFF97316),
+        icon: Icons.warning_amber_rounded,
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+    final response = await SupabaseAuthService.sendMagicLink(email: email);
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+    });
+    _showMessage(
+      response['message'],
+      color: response['success']
+          ? const Color(0xFF16A34A)
+          : const Color(0xFFEF4444),
+      icon: response['success']
+          ? Icons.mark_email_read_rounded
+          : Icons.error_outline_rounded,
+    );
+  }
+
+  Future<void> _handleVerifyCode() async {
+    final email = _verificationEmail;
+    final fullName = _verificationFullName;
+    final role = _verificationRole;
+    final code = _verificationCodeController.text.trim();
+
+    if (email == null || fullName == null || role == null) {
+      _showMessage(
+        'Please start the signup process again.',
+        color: const Color(0xFFEF4444),
+        icon: Icons.error_outline_rounded,
+      );
+      _exitVerificationStep();
+      return;
+    }
+    if (code.length != 6) {
+      _showMessage(
+        'Enter the 6-digit verification code.',
+        color: const Color(0xFFF97316),
+        icon: Icons.warning_amber_rounded,
       );
       return;
     }
@@ -477,112 +759,151 @@ class _AuthPageState extends State<AuthPage> {
       _isLoading = true;
     });
 
-    try {
-      final response = await SupabaseAuthService.signUp(
+    final response = await SupabaseAuthService.verifyEmailCode(
+      email: email,
+      code: code,
+    );
+
+    if (!mounted) return;
+
+    if (response['success']) {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(data: {'name': fullName, 'role': role}),
+      );
+      await PushNotificationService.ensurePermissionsAndSyncToken();
+      setState(() {
+        _isLoading = false;
+      });
+      _showMessage(
+        'Email verified successfully.',
+        color: const Color(0xFF16A34A),
+        icon: Icons.check_circle_outline_rounded,
+      );
+      _exitVerificationStep();
+      _pendingInviteNotifier.value = null;
+      _navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const DashboardPage()),
+        (Route<dynamic> route) => false,
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+    _showMessage(
+      response['message'],
+      color: const Color(0xFFEF4444),
+      icon: Icons.error_outline_rounded,
+    );
+  }
+
+  Future<void> _handleResendCode() async {
+    if (_resendCooldownSeconds > 0) {
+      return;
+    }
+    final email = _verificationEmail;
+    final password = _verificationPassword;
+    final fullName = _verificationFullName;
+    final role = _verificationRole;
+    if (email == null || password == null || fullName == null || role == null) {
+      _exitVerificationStep();
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+    final response = await SupabaseAuthService.signUp(
+      email: email,
+      password: password,
+      userMetadata: {'name': fullName, 'role': role},
+    );
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (response['success']) {
+      _startResendCooldown();
+      _showMessage(
+        'Verification code sent',
+        color: const Color(0xFF16A34A),
+        icon: Icons.mark_email_read_rounded,
+      );
+    } else {
+      _showMessage(
+        response['message'],
+        color: const Color(0xFFEF4444),
+        icon: Icons.error_outline_rounded,
+      );
+    }
+  }
+
+  Future<void> _handleSignUp() async {
+    final String fullName = _fullNameController.text.trim();
+    final String email = _emailController.text.trim().toLowerCase();
+    final String password = _passwordController.text.trim();
+
+    if (fullName.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        _selectedRole == null) {
+      _showMessage(
+        'Please fill in all fields and select a role',
+        color: const Color(0xFFF97316),
+        icon: Icons.warning_amber_rounded,
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final response = await SupabaseAuthService.signUp(
+      email: email,
+      password: password,
+      userMetadata: {'role': _selectedRole, 'name': fullName},
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (response['success']) {
+      _enterVerificationStep(
         email: email,
         password: password,
-        userMetadata: {"role": _selectedRole, "name": fullName},
+        fullName: fullName,
+        role: _selectedRole!,
       );
-
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (response['success']) {
-        await PushNotificationService.ensurePermissionsAndSyncToken();
-        _navigatorKey.currentState?.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const DashboardPage()),
-          (Route<dynamic> route) => false,
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.error_outline_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    response['message'],
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFFEF4444),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.all(16),
-            elevation: 4,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.error_outline_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'An error occurred: $e',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.all(16),
-          elevation: 4,
-        ),
+      _showMessage(
+        'Verification code sent to $email',
+        color: const Color(0xFF16A34A),
+        icon: Icons.mark_email_read_rounded,
+      );
+    } else {
+      _showMessage(
+        response['message'],
+        color: const Color(0xFFEF4444),
+        icon: Icons.error_outline_rounded,
       );
     }
   }
 
   @override
   void dispose() {
+    _resendCooldownTimer?.cancel();
     _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _verificationCodeController.dispose();
     _termsRecognizer?.dispose();
     _privacyRecognizer?.dispose();
+    _pendingInviteNotifier.removeListener(_handleInviteContextChanged);
     super.dispose();
   }
 
@@ -855,6 +1176,32 @@ class _AuthPageState extends State<AuthPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_pendingInviteNotifier.value != null) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDBEAFE),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF93C5FD)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.mail_outline_rounded, color: Color(0xFF2563EB)),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'You opened an invitation link. Create your account to continue.',
+                        style: TextStyle(
+                          color: Color(0xFF1D4ED8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
             const Text(
               'Full Name',
               style: TextStyle(
@@ -1157,167 +1504,7 @@ class _AuthPageState extends State<AuthPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isLoading
-                    ? null
-                    : () async {
-                        final String fullName = _fullNameController.text.trim();
-                        final String email = _emailController.text.trim();
-                        final String password = _passwordController.text.trim();
-
-                        if (fullName.isEmpty ||
-                            email.isEmpty ||
-                            password.isEmpty ||
-                            _selectedRole == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.warning_amber_rounded,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Expanded(
-                                    child: Text(
-                                      'Please fill in all fields and select a role',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              backgroundColor: const Color(0xFFF97316),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              margin: const EdgeInsets.all(16),
-                              elevation: 4,
-                            ),
-                          );
-                          return;
-                        }
-
-                        setState(() {
-                          _isLoading = true;
-                        });
-
-                        try {
-                          final response = await SupabaseAuthService.signUp(
-                            email: email,
-                            password: password,
-                            userMetadata: {
-                              "role": _selectedRole,
-                              "name": fullName,
-                            },
-                          );
-
-                          if (!mounted) return;
-
-                          setState(() {
-                            _isLoading = false;
-                          });
-
-                          if (response['success']) {
-                            await PushNotificationService.ensurePermissionsAndSyncToken();
-                            _navigatorKey.currentState?.pushAndRemoveUntil(
-                              MaterialPageRoute(
-                                builder: (context) => const DashboardPage(),
-                              ),
-                              (Route<dynamic> route) => false,
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.error_outline_rounded,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        response['message'],
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                backgroundColor: const Color(0xFFEF4444),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                margin: const EdgeInsets.all(16),
-                                elevation: 4,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (!mounted) return;
-
-                          setState(() {
-                            _isLoading = false;
-                          });
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.error_outline_rounded,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      'An error occurred: $e',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              backgroundColor: const Color(0xFFEF4444),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              margin: const EdgeInsets.all(16),
-                              elevation: 4,
-                            ),
-                          );
-                        }
-                      },
+                onPressed: _isLoading ? null : _handleSignUp,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0F172A),
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1458,6 +1645,136 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
+  Widget _buildVerificationForm() {
+    final email = _verificationEmail ?? _emailController.text.trim().toLowerCase();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 32.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Enter verification code',
+            style: TextStyle(
+              color: Color(0xFF020817),
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'We sent a 6-digit code to $email',
+            style: const TextStyle(
+              color: Color(0xFF64748B),
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            controller: _verificationCodeController,
+            enabled: !_isLoading,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 8,
+            ),
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              hintText: '000000',
+              counterText: '',
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Check your spam folder. The email comes from verification@toothfile.com.',
+            style: TextStyle(
+              color: Color(0xFF64748B),
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _handleVerifyCode,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Verify Email',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: (_isLoading || _resendCooldownSeconds > 0)
+                  ? null
+                  : _handleResendCode,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                side: const BorderSide(color: Color(0xFFE2E8F0)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                _resendCooldownSeconds > 0
+                    ? 'Resend code in ${_resendCooldownSeconds}s'
+                    : 'Resend code',
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: _isLoading ? null : _exitVerificationStep,
+              child: const Text('Wrong email?'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1489,21 +1806,29 @@ class _AuthPageState extends State<AuthPage> {
                       Padding(
                         padding: const EdgeInsets.all(24.0),
                         child: Column(
-                          children: const [
+                          children: [
                             Text(
-                              'Welcome',
+                              _showVerificationStep
+                                  ? 'Verify your email'
+                                  : _pendingInviteNotifier.value != null
+                                  ? 'Create your account'
+                                  : 'Welcome',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Color(0xFF020817),
                                 fontSize: 24,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            SizedBox(height: 6),
+                            const SizedBox(height: 6),
                             Text(
-                              'Sign in to your account or create a new one',
+                              _showVerificationStep
+                                  ? 'Enter the 6-digit code to finish creating your account'
+                                  : _pendingInviteNotifier.value != null
+                                  ? 'Complete your invited account setup'
+                                  : 'Sign in to your account',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Color(0xFF64748B),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w400,
@@ -1512,119 +1837,430 @@ class _AuthPageState extends State<AuthPage> {
                           ],
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24.0,
-                          vertical: 0,
-                        ),
-                        child: Container(
-                          height: 44,
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _isSignInSelected = true;
-                                    });
-                                  },
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    curve: Curves.easeInOut,
-                                    decoration: BoxDecoration(
-                                      color: _isSignInSelected
-                                          ? Colors.white
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                      boxShadow: _isSignInSelected
-                                          ? [
-                                              BoxShadow(
-                                                color: Colors.black.withOpacity(
-                                                  0.08,
-                                                ),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                                spreadRadius: 0,
-                                              ),
-                                            ]
-                                          : null,
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      'Sign In',
-                                      style: TextStyle(
-                                        color: _isSignInSelected
-                                            ? const Color(0xFF020817)
-                                            : const Color(0xFF64748B),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _isSignInSelected = false;
-                                    });
-                                    _updateTouchBar();
-                                  },
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    curve: Curves.easeInOut,
-                                    decoration: BoxDecoration(
-                                      color: !_isSignInSelected
-                                          ? Colors.white
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                      boxShadow: !_isSignInSelected
-                                          ? [
-                                              BoxShadow(
-                                                color: Colors.black.withOpacity(
-                                                  0.08,
-                                                ),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                                spreadRadius: 0,
-                                              ),
-                                            ]
-                                          : null,
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      'Sign Up',
-                                      style: TextStyle(
-                                        color: !_isSignInSelected
-                                            ? const Color(0xFF020817)
-                                            : const Color(0xFF64748B),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 0.2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      _isSignInSelected
-                          ? _buildSignInForm()
-                          : _buildSignUpForm(),
+                      _showVerificationStep
+                          ? _buildVerificationForm()
+                          : _pendingInviteNotifier.value != null
+                          ? _buildSignUpForm()
+                          : _buildSignInForm(),
                     ],
                   ),
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SetPasswordScreen extends StatefulWidget {
+  const SetPasswordScreen({super.key});
+
+  @override
+  State<SetPasswordScreen> createState() => _SetPasswordScreenState();
+}
+
+class _SetPasswordScreenState extends State<SetPasswordScreen> {
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
+  bool _isLoading = false;
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
+
+  void _showMessage(String message, {required Color color, IconData? icon}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon ?? Icons.info_outline_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        elevation: 4,
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    if (password.length < 6) {
+      _showMessage(
+        'Min 6 characters.',
+        color: const Color(0xFFEF4444),
+        icon: Icons.error_outline_rounded,
+      );
+      return;
+    }
+    if (password != confirmPassword) {
+      _showMessage(
+        'Passwords do not match.',
+        color: const Color(0xFFEF4444),
+        icon: Icons.error_outline_rounded,
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: password),
+      );
+
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      if (uid != null) {
+        try {
+          await Supabase.instance.client
+              .from('profiles')
+              .update({'password_setup_completed': true})
+              .eq('id', uid);
+        } catch (_) {}
+      }
+
+      _passwordRecoveryNotifier.value = false;
+      if (!mounted) {
+        return;
+      }
+      _showMessage(
+        'Password updated.',
+        color: const Color(0xFF16A34A),
+        icon: Icons.check_circle_outline_rounded,
+      );
+      Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
+    } on AuthException catch (e) {
+      if (!mounted) {
+        return;
+      }
+      _showMessage(
+        e.message,
+        color: const Color(0xFFEF4444),
+        icon: Icons.error_outline_rounded,
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showMessage(
+        'Unable to update your password right now.',
+        color: const Color(0xFFEF4444),
+        icon: Icons.error_outline_rounded,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async => false,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0C000000),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Set new password',
+                        style: TextStyle(
+                          color: Color(0xFF020817),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Create a new password to finish your password recovery.',
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'New password',
+                        style: TextStyle(
+                          color: Color(0xFF020817),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: !_passwordVisible,
+                        enabled: !_isLoading,
+                        decoration: InputDecoration(
+                          hintText: 'Enter your new password',
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF2563EB),
+                            ),
+                          ),
+                          suffixIcon: IconButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _passwordVisible = !_passwordVisible;
+                                    });
+                                  },
+                            icon: Icon(
+                              _passwordVisible
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Confirm password',
+                        style: TextStyle(
+                          color: Color(0xFF020817),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _confirmPasswordController,
+                        obscureText: !_confirmPasswordVisible,
+                        enabled: !_isLoading,
+                        decoration: InputDecoration(
+                          hintText: 'Re-enter your new password',
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF2563EB),
+                            ),
+                          ),
+                          suffixIcon: IconButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _confirmPasswordVisible =
+                                          !_confirmPasswordVisible;
+                                    });
+                                  },
+                            icon: Icon(
+                              _confirmPasswordVisible
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F172A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'Update Password',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EmailVerifiedSuccessPage extends StatelessWidget {
+  const EmailVerifiedSuccessPage({super.key, required this.onContinue});
+
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0C000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFDCFCE7),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: Color(0xFF16A34A),
+                    size: 36,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Email verified',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF020817),
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Your ToothFile email link was confirmed successfully.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: onContinue,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Continue'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

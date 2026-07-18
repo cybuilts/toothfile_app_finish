@@ -12,6 +12,8 @@ import 'package:toothfile/touchbar/touch_bar_helper.dart';
 import 'package:touch_bar/touch_bar.dart';
 import 'package:toothfile/main.dart';
 import 'package:toothfile/supabase_auth_service.dart';
+import 'package:toothfile/update_install_types.dart';
+import 'package:toothfile/update_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsTab extends StatefulWidget {
@@ -37,6 +39,13 @@ class _SettingsTabState extends State<SettingsTab> {
   bool _notifConnectionRequests = true;
   bool _notifConnectionAccepted = true;
   String _selectedTheme = 'system'; // light, dark, system
+  String _appVersionLabel = 'Loading...';
+  bool _checkingForUpdates = false;
+  bool _installingUpdate = false;
+  RemoteUpdateInfo? _availableUpdate;
+  String? _updateStatusMessage;
+  String? _updateInstallMessage;
+  double? _updateInstallProgress;
 
   @override
   void initState() {
@@ -53,8 +62,12 @@ class _SettingsTabState extends State<SettingsTab> {
     _loadPushEnabled();
     _loadNotificationPrefs();
     _loadThemePreference();
+    _loadInstalledVersion();
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _updateTouchBar());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateTouchBar();
+      _checkForUpdates(showFeedback: false);
+    });
   }
 
   Widget _buildThemeCard() {
@@ -267,11 +280,348 @@ class _SettingsTabState extends State<SettingsTab> {
     }
   }
 
+  Future<void> _openContactSupport() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ContactSupportPage(userEmail: _useremail),
+      ),
+    );
+  }
+
+  Future<void> _loadInstalledVersion() async {
+    final installed = await UpdateService.getInstalledVersion();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _appVersionLabel = installed.releaseLabel;
+    });
+  }
+
+  Future<void> _checkForUpdates({required bool showFeedback}) async {
+    if (_checkingForUpdates) {
+      return;
+    }
+    setState(() {
+      _checkingForUpdates = true;
+      _updateStatusMessage = null;
+    });
+
+    final result = await UpdateService.checkForUpdates();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _checkingForUpdates = false;
+      _appVersionLabel = result.installedVersion.releaseLabel;
+      _availableUpdate = result.availableUpdate;
+      _updateStatusMessage = result.errorMessage;
+    });
+
+    if (!showFeedback) {
+      return;
+    }
+
+    if (result.availableUpdate != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${result.availableUpdate!.displayLabel} is available.',
+          ),
+          backgroundColor: const Color(0xFF16A34A),
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.errorMessage ?? 'You already have the latest version.',
+        ),
+        backgroundColor: result.errorMessage == null
+            ? const Color(0xFF16A34A)
+            : const Color(0xFFEF4444),
+      ),
+    );
+  }
+
+  Future<void> _installAvailableUpdate() async {
+    final update = _availableUpdate;
+    if (update == null) {
+      return;
+    }
+
+    if (!UpdateService.supportsInAppInstall) {
+      final opened = await UpdateService.openUpdate(update);
+      if (!mounted) {
+        return;
+      }
+      if (!opened) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to open the update link.'),
+            backgroundColor: Color(0xFFEF4444),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _installingUpdate = true;
+      _updateInstallProgress = 0;
+      _updateInstallMessage = 'Preparing update...';
+    });
+
+    final result = await UpdateService.downloadAndInstallUpdate(
+      update,
+      onProgress: (progress) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _updateInstallProgress = progress.progress;
+          _updateInstallMessage = progress.message;
+        });
+      },
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (result.appWillExit) {
+      setState(() {
+        _updateInstallMessage = result.message;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: const Color(0xFF16A34A),
+        ),
+      );
+      await Future.delayed(const Duration(milliseconds: 600));
+      await UpdateService.exitForInstall();
+      return;
+    }
+
+    setState(() {
+      _installingUpdate = false;
+      _updateInstallProgress = result.success ? 1 : null;
+      _updateInstallMessage = result.message;
+    });
+
+    if (!result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.message),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message),
+        backgroundColor: const Color(0xFF16A34A),
+      ),
+    );
+  }
+
+  Widget _buildUpdateCard({
+    required Color cardColor,
+    required Color borderColor,
+    required Color titleColor,
+    required Color mutedTextColor,
+    required Color panelColor,
+    required bool isDark,
+  }) {
+    final update = _availableUpdate;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1B3A2A) : const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.system_update_rounded,
+                  color: Color(0xFF16A34A),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'App Updates',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: titleColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Current version: $_appVersionLabel',
+            style: TextStyle(fontSize: 14, color: mutedTextColor),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            update != null
+                ? 'New build available: ${update.displayLabel}'
+                : (_updateStatusMessage ?? 'Checks for updates on startup and on demand.'),
+            style: TextStyle(fontSize: 13, color: mutedTextColor, height: 1.45),
+          ),
+          if (_updateInstallMessage != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _updateInstallMessage!,
+              style: TextStyle(fontSize: 12, color: mutedTextColor, height: 1.4),
+            ),
+          ],
+          if (_installingUpdate && _updateInstallProgress != null) ...[
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: _updateInstallProgress! > 0 && _updateInstallProgress! <= 1
+                  ? _updateInstallProgress
+                  : null,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(999),
+              backgroundColor: isDark
+                  ? const Color(0xFF1E293B)
+                  : const Color(0xFFE2E8F0),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF16A34A)),
+            ),
+          ],
+          if (update?.sourceName != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Source: ${update!.sourceName}',
+              style: TextStyle(fontSize: 12, color: mutedTextColor),
+            ),
+          ],
+          if (update != null && update.releaseNotes.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: panelColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: update.releaseNotes
+                    .map(
+                      (note) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          '- $note',
+                          style: TextStyle(fontSize: 13, color: mutedTextColor),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _checkingForUpdates
+                      ? null
+                      : () => _checkForUpdates(showFeedback: true),
+                  icon: _checkingForUpdates
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                  label: Text(_checkingForUpdates ? 'Checking...' : 'Check Now'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: BorderSide(color: borderColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              if (update != null) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _installingUpdate ? null : _installAvailableUpdate,
+                    icon: Icon(
+                      _installingUpdate
+                          ? Icons.hourglass_top_rounded
+                          : (UpdateService.supportsAutomaticBackgroundInstall
+                                ? Icons.system_update_alt_rounded
+                                : UpdateService.supportsInAppInstall
+                                ? Icons.download_for_offline_rounded
+                                : Icons.open_in_new_rounded),
+                    ),
+                    label: Text(
+                      _installingUpdate
+                          ? 'Installing...'
+                          : UpdateService.supportsAutomaticBackgroundInstall
+                          ? 'Download & Install'
+                          : UpdateService.supportsInAppInstall
+                          ? 'Download Update'
+                          : 'Open Download',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _logout() async {
     await SupabaseAuthService.logout();
     if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const MyApp()),
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const AuthPage()),
       (route) => false,
     );
   }
@@ -842,6 +1192,15 @@ class _SettingsTabState extends State<SettingsTab> {
                 style: TextStyle(fontSize: 14, color: mutedTextColor),
               ),
               const SizedBox(height: 20),
+              _buildUpdateCard(
+                cardColor: cardColor,
+                borderColor: borderColor,
+                titleColor: titleColor,
+                mutedTextColor: mutedTextColor,
+                panelColor: panelColor,
+                isDark: isDark,
+              ),
+              const SizedBox(height: 20),
               Container(
                 decoration: BoxDecoration(
                   color: cardColor,
@@ -1124,41 +1483,26 @@ class _SettingsTabState extends State<SettingsTab> {
                     const SizedBox(height: 20),
                     Align(
                       alignment: Alignment.centerRight,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF2563EB), Color(0xFF8B5CF6)],
+                      child: ElevatedButton.icon(
+                        onPressed: _saveProfile,
+                        icon: const Icon(Icons.save_rounded, size: 18),
+                        label: const Text(
+                          'Save Changes',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF2563EB).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
-                        child: ElevatedButton.icon(
-                          onPressed: _saveProfile,
-                          icon: const Icon(Icons.save_rounded, size: 18),
-                          label: const Text(
-                            'Save Changes',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1D4ED8),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF2563EB),
-                            foregroundColor: Colors.white,
-                            shadowColor: Colors.transparent,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
@@ -1438,10 +1782,8 @@ class _SettingsTabState extends State<SettingsTab> {
                     _buildLegalActionRow(
                       icon: Icons.support_agent_rounded,
                       title: 'Support Contact',
-                      subtitle: 'toothfileoriginal@gmail.com',
-                      onTap: () => _openExternalUrl(
-                        'mailto:toothfileoriginal@gmail.com',
-                      ),
+                      subtitle: 'support@toothfile.com',
+                      onTap: _openContactSupport,
                     ),
                     const SizedBox(height: 16),
                     Container(
@@ -1836,6 +2178,114 @@ class _SettingsTabState extends State<SettingsTab> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class ContactSupportPage extends StatelessWidget {
+  const ContactSupportPage({super.key, required this.userEmail});
+
+  final String userEmail;
+
+  Future<void> _sendEmail() async {
+    final uri = Uri(
+      scheme: 'mailto',
+      path: 'support@toothfile.com',
+      queryParameters: {
+        'subject': 'ToothFile Support Request',
+        'body':
+            'Describe your issue here...\n\n---\nApp: ToothFile Mobile\nUser: $userEmail\nDevice: ${kIsWeb ? 'web' : defaultTargetPlatform.name}',
+      },
+    );
+    await launchUrl(uri);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF020617) : const Color(0xFFF8FAFC);
+    final panelColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF2B3A55) : const Color(0xFFE2E8F0);
+    final titleColor = isDark ? const Color(0xFFE5E7EB) : const Color(0xFF020817);
+    final mutedTextColor = isDark ? const Color(0xFFA8B3C7) : const Color(0xFF64748B);
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        title: const Text('Contact Support'),
+        backgroundColor: backgroundColor,
+        elevation: 0,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: panelColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Need help?',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: titleColor,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SelectableText(
+                  'support@toothfile.com',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: titleColor,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Please use support@toothfile.com for help with your account, files, or device issues.',
+                  style: TextStyle(fontSize: 14, color: mutedTextColor, height: 1.5),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Text(
+                    'verification@toothfile.com, invitations@toothfile.com, and notifications@toothfile.com are automated addresses and do not accept replies. For help please email support@toothfile.com.',
+                    style: TextStyle(fontSize: 13, color: mutedTextColor, height: 1.5),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _sendEmail,
+                    icon: const Icon(Icons.email_outlined),
+                    label: const Text('Send Email'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toothfile/touchbar/touch_bar_helper.dart';
+import 'package:toothfile/supabase_auth_service.dart';
 
 class InviteCollaboratorDialog extends StatefulWidget {
   const InviteCollaboratorDialog({super.key});
@@ -18,10 +17,6 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
   final TextEditingController _personalMessageController =
       TextEditingController();
   bool _isLoading = false;
-
-  // Replace with your actual deployed Deno function URL
-  static const String denoFunctionUrl =
-      'https://ikqsbkfnjamvkevsxqpr.supabase.co/functions/v1/invite-user';
 
   @override
   void initState() {
@@ -147,28 +142,14 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
           user.email ??
           'Unknown User';
 
-      final inviterRole =
-          user.userMetadata?['role'] ??
-          user.userMetadata?['user_role'] ??
-          'role';
-      final inviterEmail = user.email!;
-
-      final response = await http.post(
-        Uri.parse(denoFunctionUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization':
-              'Bearer ${Supabase.instance.client.auth.currentSession?.accessToken}',
+      final response = await Supabase.instance.client.functions.invoke(
+        'send-invitation-email',
+        body: {
+          'recipientEmail': recipientEmail.toLowerCase(),
+          'recipientName': null,
+          'senderName': inviterName,
+          'invitationUrl': 'https://toothfile.com/auth?invited_by=${user.id}',
         },
-        body: jsonEncode({
-          'inviterName': inviterName,
-          'inviterEmail': inviterEmail,
-          'inviterRole': inviterRole,
-          'recipientEmail': recipientEmail,
-          'personalMessage': personalMessage.isNotEmpty
-              ? personalMessage
-              : null,
-        }),
       );
 
       if (mounted) {
@@ -177,7 +158,7 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
         });
       }
 
-      if (response.statusCode == 200) {
+      if (response.status == 200 || response.status == 201) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -216,49 +197,59 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
           Navigator.of(context).pop();
         }
       } else {
-        if (mounted) {
-          final errorBody = jsonDecode(response.body);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.error_outline_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Failed to send invitation: ${errorBody['error'] ?? response.reasonPhrase}',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: const Color(0xFFEF4444),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              margin: const EdgeInsets.all(16),
-              elevation: 4,
-            ),
-          );
-        }
+        throw Exception('status:${response.status}');
       }
     } catch (e) {
+      final message = e.toString().toLowerCase();
+      if (message.contains('401')) {
+        await SupabaseAuthService.logout();
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.lock_outline_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Your session expired. Please sign in again.',
+                    style: TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+            elevation: 4,
+          ),
+        );
+        return;
+      }
+
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+
+        final friendlyMessage = message.contains('429')
+            ? 'Too many invitations sent. Please try again in a minute.'
+            : 'Couldn\'t send invitation email. Please try again shortly.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -278,7 +269,7 @@ class _InviteCollaboratorDialogState extends State<InviteCollaboratorDialog> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Error sending invitation: $e',
+                    friendlyMessage,
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),

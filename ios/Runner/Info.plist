@@ -8,6 +8,7 @@
     <key>CFBundleURLSchemes</key>
     <array>
       <string>io.supabase.toothfile</string>
+      <string>io.toothfile.app</string>
       <string>com.googleusercontent.apps.788668999922-ev0060rn3mnvkuaauth9h2h5doa95sof</string>
     </array>
   </dict>
